@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sudoku Master with Smart Hint</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     :root {
       --bg-color: #f8fafc;
@@ -14,7 +16,8 @@
       --border-cell: #e2e8f0;
       --text-given: #0f172a;
       --text-user: #2563eb;
-      --text-hint: #d97706; /* Màu vàng hổ phách cho số gợi ý */
+      --text-hint: #d97706;
+      /* Màu vàng hổ phách cho số gợi ý */
       --highlight-active: #bfdbfe;
       --highlight-cross: #f1f5f9;
       --highlight-match: #dbeafe;
@@ -144,13 +147,22 @@
     }
 
     /* Viền khối 3x3 */
-    .cell:nth-child(3n) { border-right: 2px solid var(--border-block); }
-    .cell:nth-child(9n) { border-right: none; }
+    .cell:nth-child(3n) {
+      border-right: 2px solid var(--border-block);
+    }
+
+    .cell:nth-child(9n) {
+      border-right: none;
+    }
+
     .cell:nth-child(n+19):nth-child(-n+27),
     .cell:nth-child(n+46):nth-child(-n+54) {
       border-bottom: 2px solid var(--border-block);
     }
-    .cell:nth-child(n+73):nth-child(-n+81) { border-bottom: none; }
+
+    .cell:nth-child(n+73):nth-child(-n+81) {
+      border-bottom: none;
+    }
 
     /* Định kiểu dữ liệu trong ô */
     .cell.given {
@@ -178,15 +190,24 @@
         background-color: #fef08a !important;
         transform: scale(1.15);
       }
+
       100% {
         transform: scale(1);
       }
     }
 
     /* Highlight */
-    .cell.active { background-color: var(--highlight-active) !important; }
-    .cell.crosshair { background-color: var(--highlight-cross); }
-    .cell.match { background-color: var(--highlight-match); }
+    .cell.active {
+      background-color: var(--highlight-active) !important;
+    }
+
+    .cell.crosshair {
+      background-color: var(--highlight-cross);
+    }
+
+    .cell.match {
+      background-color: var(--highlight-match);
+    }
 
     /* Numpad */
     .numpad {
@@ -211,18 +232,41 @@
       transition: all 0.15s ease;
     }
 
-    .btn-num:hover { background-color: #f1f5f9; }
-    .btn-num:active { transform: scale(0.96); }
+    .btn-num:hover {
+      background-color: #f1f5f9;
+    }
+
+    .btn-num:active {
+      transform: scale(0.96);
+    }
+
     .btn-delete {
       grid-column: span 2;
       background-color: #fee2e2;
       color: #dc2626;
       border-color: #fecaca;
     }
-    .btn-delete:hover { background-color: #fca5a5; }
+
+    .btn-delete:hover {
+      background-color: #fca5a5;
+    }
+
+    .cell.error {
+      color: #dc2626 !important;
+      /* Màu đỏ cho số sai */
+      background-color: #fee2e2 !important;
+      /* Nền hồng nhạt để dễ nhận biết */
+    }
   </style>
 </head>
+
 <body>
+
+  <div id="tutorial-container"
+    style="max-width: 450px; margin-bottom: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); font-size: 14px; line-height: 1.5;">
+    <strong style="color: var(--primary-color); display: block; margin-bottom: 5px;">💡 Mẹo cho bạn:</strong>
+    <div id="tutorial-text">Hãy chọn một ô và thử điền số. Bạn có thể dùng nút Gợi ý nếu bị kẹt!</div>
+  </div>
 
   <h1>SUDOKU</h1>
 
@@ -379,7 +423,7 @@
         this.board = Array.from({ length: 9 }, () => Array(9).fill(0));
         this.fillDiagonalBoxes();
         this.fillRemaining();
-        
+
         const solution = JSON.parse(JSON.stringify(this.board));
         const puzzle = this.removeNumbers(target);
 
@@ -401,11 +445,11 @@
     function startNewGame() {
       const difficulty = document.getElementById("difficulty").value;
       const data = engine.generate(difficulty);
-      
+
       initialPuzzle = data.puzzle;
       solutionBoard = data.solution;
       currentBoard = JSON.parse(JSON.stringify(initialPuzzle));
-      
+
       hintedCells.clear();
       hintsRemaining = 3;
       selectedCell = null;
@@ -443,6 +487,11 @@
               cell.classList.add("hinted");
             } else {
               cell.classList.add("user-filled");
+
+              // --- ĐOẠN THÊM VÀO ĐỂ KIỂM TRA ĐÚNG SAI ---
+              if (val !== solutionBoard[r][c]) {
+                cell.classList.add("error");
+              }
             }
           }
 
@@ -473,7 +522,7 @@
         } else if (cellR === r || cellC === c) {
           cell.classList.add("crosshair");
         }
-        
+
         if (selectedVal !== 0 && cellVal === selectedVal && !(cellR === r && cellC === c)) {
           cell.classList.add("match");
         }
@@ -491,6 +540,15 @@
       lastHintedCoord = null;
       renderBoard();
       selectCell(row, col);
+
+      if (checkWin()) {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+        alert("🎉 Bạn đã chiến thắng!");
+      }
     }
 
     // TÍNH NĂNG GỢI Ý THÔNG MINH
@@ -530,11 +588,17 @@
         targetC = chosen.c;
       }
 
-      // Điền đáp án đúng
-      currentBoard[targetR][targetC] = solutionBoard[targetR][targetC];
+      const correctValue = solutionBoard[targetR][targetC];
+
+      // Hiện thông báo giải thích vào tutorial-text
+      const tutorialText = document.getElementById("tutorial-text");
+      tutorialText.innerHTML = `<strong>Gợi ý:</strong> Ô tại hàng ${targetR + 1}, cột ${targetC + 1} nên là số <b>${correctValue}</b>. Hãy thử quan sát các hàng và cột xung quanh xem tại sao nhé!`;
+
+      // Vẫn điền số nhưng cho hiệu ứng rõ hơn
+      currentBoard[targetR][targetC] = correctValue;
       hintedCells.add(`${targetR}-${targetC}`);
       lastHintedCoord = { r: targetR, c: targetC };
-      
+
       hintsRemaining--;
       updateHintButton();
       renderBoard();
@@ -552,7 +616,21 @@
       }
     });
 
+    function checkWin() {
+      // Duyệt qua toàn bộ bàn cờ 9x9
+      for (let r = 0; r < 9; r++) {
+        for (let c = 0; c < 9; c++) {
+          // Nếu có bất kỳ ô nào không khớp với đáp án (bao gồm cả ô trống = 0)
+          if (currentBoard[r][c] !== solutionBoard[r][c]) {
+            return false; // Chưa thắng, tiếp tục chơi
+          }
+        }
+      }
+      return true; // Tất cả đều khớp -> Thắng!
+    }
+
     startNewGame();
   </script>
 </body>
+
 </html>
