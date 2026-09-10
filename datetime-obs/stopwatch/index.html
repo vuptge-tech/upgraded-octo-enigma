@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>OBS Stopwatch Stable</title>
+    <!-- Sử dụng Share Tech Mono - Font đơn cách chuyên dụng -->
+    <style>
+		@font-face {
+		font-family: 'digitalfont';
+		src: url('../digital-7-mono.ttf');
+		}
+		
+        body {
+            background-color: rgba(0, 0, 0, 0); 
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #timer {
+            font-family: 'digitalfont', monospace; /* Font đơn cách */
+            font-size: 120px;
+            color: #ffffff;
+            text-shadow: 0 0 20px rgba(0, 255, 242, 0.8), 4px 4px 5px rgba(0,0,0,1);
+            text-align: center;
+            user-select: none;
+
+            /* QUAN TRỌNG NHẤT: Chống nhảy số */
+            font-variant-numeric: tabular-nums; 
+            white-space: nowrap; /* Không cho phép xuống dòng */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="timer">00:00:00</div>
+
+    <script>
+        let seconds = 0;
+        function formatTime(s) {
+            const hrs = Math.floor(s / 3600);
+            const mins = Math.floor((s % 3600) / 60);
+            const secs = s % 60;
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        function updateTimer() {
+            seconds++;
+            document.getElementById('timer').innerText = formatTime(seconds);
+        }
+        setInterval(updateTimer, 1000);
+    </script>
+</body>
+</html>

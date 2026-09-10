@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vòng Quay May Mắn Pro - OBS Studio</title>
+    <!-- Pháo hoa cao cấp -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Nunito:wght@700;800;900&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Nunito', sans-serif;
+        }
+
+        /* Khung chứa vòng quay */
+        .wheel-wrapper {
+            position: relative;
+            width: 520px;
+            height: 520px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            filter: drop-shadow(0 20px 35px rgba(0, 0, 0, 0.7));
+        }
+
+        canvas {
+            width: 520px;
+            height: 520px;
+        }
+
+        /* Mũi tên chỉ thưởng - Thiết kế 3D ánh kim */
+        .pointer-arrow {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 38px;
+            height: 48px;
+            z-index: 50;
+            filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.6));
+        }
+
+        .pointer-arrow svg {
+            width: 100%;
+            height: 100%;
+            fill: url(#goldGrad);
+        }
+
+        /* Nút quay trung tâm dạng 3D Gold Cap */
+        .spin-center-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 82px;
+            height: 82px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #ffd700, #ff8c00);
+            border: 4px solid #fff;
+            box-shadow: 0 0 20px rgba(255, 140, 0, 0.8), inset 0 2px 5px rgba(255, 255, 255, 0.8), 0 8px 15px rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 17px;
+            color: #4a1c00;
+            letter-spacing: 1px;
+            cursor: pointer;
+            z-index: 60;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .spin-center-btn:hover {
+            transform: translate(-50%, -50%) scale(1.06);
+            box-shadow: 0 0 28px rgba(255, 215, 0, 1), inset 0 2px 8px rgba(255, 255, 255, 1), 0 10px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        .spin-center-btn:active {
+            transform: translate(-50%, -50%) scale(0.94);
+        }
+
+        /* Toolbar điều khiển góc phải */
+        .stream-toolbar {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            display: flex;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .tool-btn {
+            background: rgba(15, 23, 42, 0.85);
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .tool-btn:hover {
+            background: #2563eb;
+            color: white;
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+        }
+
+        /* ================= POPUP CHIẾN THẮNG TRUNG TÂM (GLASSMORPHISM) ================= */
+        .winner-screen {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 7, 15, 0.75);
+            backdrop-filter: blur(10px);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .winner-card-3d {
+            position: relative;
+            background: linear-gradient(135deg, rgba(30, 27, 75, 0.95), rgba(15, 23, 42, 0.95));
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            padding: 40px 50px;
+            border-radius: 28px;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.35), 0 25px 50px rgba(0, 0, 0, 0.8);
+            text-align: center;
+            max-width: 80%;
+            min-width: 360px;
+            animation: zoomElastic 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .winner-badge {
+            display: inline-block;
+            background: linear-gradient(90deg, #ffd700, #ff8c00);
+            color: #3b1400;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 13px;
+            letter-spacing: 2px;
+            padding: 6px 18px;
+            border-radius: 50px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 12px rgba(255, 140, 0, 0.4);
+            margin-bottom: 18px;
+        }
+
+        .winner-text {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 42px;
+            font-weight: 900;
+            color: #ffffff;
+            line-height: 1.2;
+            margin-bottom: 16px;
+            word-break: break-word;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+        }
+
+        .winner-subtext {
+            font-size: 13px;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+
+        /* ================= MODAL CÀI ĐẶT / NHẬP LIỆU ================= */
+        .modal-bg {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 500;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .settings-dialog {
+            background: #111827;
+            border: 1px solid #374151;
+            width: 380px;
+            padding: 24px;
+            border-radius: 20px;
+            color: #f3f4f6;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+            animation: fadeIn 0.2s ease;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .settings-dialog h3 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-modal-shuffle {
+            background: #4f46e5;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-modal-shuffle:hover {
+            background: #4338ca;
+        }
+
+        .settings-dialog textarea {
+            width: 100%;
+            height: 180px;
+            background: #1f2937;
+            color: #fff;
+            border: 1px solid #4b5563;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            margin-bottom: 14px;
+            outline: none;
+        }
+
+        .settings-dialog textarea:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+
+        .option-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #9ca3af;
+            cursor: pointer;
+        }
+
+        .option-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #2563eb;
+            cursor: pointer;
+        }
+
+        .dialog-btns {
+            display: flex;
+            gap: 10px;
+        }
+
+        .dialog-btns button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            font-weight: 800;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: opacity 0.2s;
+        }
+
+        .btn-save-data {
+            background: #22c55e;
+            color: white;
+        }
+
+        .btn-close-data {
+            background: #374151;
+            color: #d1d5db;
+        }
+
+        .dialog-btns button:hover {
+            opacity: 0.9;
+        }
+
+        @keyframes zoomElastic {
+            0% {
+                transform: scale(0.3) rotate(-5deg);
+                opacity: 0;
+            }
+
+            70% {
+                transform: scale(1.05) rotate(1deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1) rotate(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- SVG định nghĩa gradient ánh kim cho mũi tên -->
+    <svg width="0" height="0" style="position:absolute">
+        <defs>
+            <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#fff275" />
+                <stop offset="50%" stop-color="#ffd700" />
+                <stop offset="100%" stop-color="#d48806" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <!-- Khung Vòng Quay -->
+    <div class="wheel-wrapper">
+        <div class="pointer-arrow">
+            <svg viewBox="0 0 24 30">
+                <path d="M12 30 L0 6 C0 2.5 5 0 12 0 C19 0 24 2.5 24 6 Z" />
+            </svg>
+        </div>
+        <canvas id="wheelCanvas"></canvas>
+        <div class="spin-center-btn" id="spinBtn">QUAY</div>
+    </div>
+
+    <!-- Thanh công cụ góc màn hình -->
+    <div class="stream-toolbar">
+        <button class="tool-btn" id="quickShuffleBtn">🔀 Xáo vị trí</button>
+        <button class="tool-btn" id="soundToggleBtn">🔊 Bật âm</button>
+        <button class="tool-btn" id="openSettingsBtn">⚙️ Nhập DS</button>
+    </div>
+
+    <!-- Màn hình Thông báo Chiến thắng (Chính giữa) -->
+    <div id="winnerScreen" class="winner-screen" onclick="closeWinner()">
+        <div class="winner-card-3d">
+            <div class="winner-badge">✨ Xin Chúc Mừng ✨</div>
+            <div class="winner-text" id="winnerLabel">Tên Phần Thưởng</div>
+            <div class="winner-subtext">(Nhấp chuột bất kỳ đâu hoặc nhấn ESC để đóng)</div>
+        </div>
+    </div>
+
+    <!-- Modal Nhập Liệu Danh Sách -->
+    <div class="modal-bg" id="settingsModal">
+        <div class="settings-dialog">
+            <div class="settings-header">
+                <h3>📝 Danh sách:</h3>
+                <button class="btn-modal-shuffle" id="modalShuffleBtn">🔀 Xáo trộn</button>
+            </div>
+            <textarea id="itemsInput" placeholder="Mỗi dòng là 1 mục thưởng..."></textarea>
+            <label class="option-row">
+                <input type="checkbox" id="autoRemoveCheckbox">
+                <span>Tự xóa tên người đã trúng sau khi quay</span>
+            </label>
+            <div class="dialog-btns">
+                <button class="btn-save-data" id="saveDataBtn">Lưu lại</button>
+                <button class="btn-close-data" id="closeDataBtn">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ================= BỘ PHÁT ÂM THANH ================= */
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playTick() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = "sine"; // Đổi "triangle" thành "sine" hoặc "sawtooth"
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime); // Tăng từ 450 lên 800 để tiếng cao và đanh hơn
+                osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.04);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.04);
+            }
+            playShuffle() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.12);
+            }
+            playWin() {
+                if (this.muted) return;
+                this.init();
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, index) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + index * 0.1);
+                    gain.gain.setValueAtTime(0.25, this.ctx.currentTime + index * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + index * 0.1 + 0.8);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + index * 0.1);
+                    osc.stop(this.ctx.currentTime + index * 0.1 + 0.8);
+                });
+            }
+        }
+        const sfx = new SoundFX();
+
+        /* ================= THUẬT TOÁN SHUFFLE (FISHER-YATES) ================= */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        /* ================= CẤU HÌNH VÒNG QUAY ================= */
+        const canvas = document.getElementById("wheelCanvas");
+        const ctx = canvas.getContext("2d");
+        const spinBtn = document.getElementById("spinBtn");
+        const winnerScreen = document.getElementById("winnerScreen");
+        const winnerLabel = document.getElementById("winnerLabel");
+
+        const CANVAS_SIZE = 520;
+        const DPR = window.devicePixelRatio || 2;
+        canvas.width = CANVAS_SIZE * DPR;
+        canvas.height = CANVAS_SIZE * DPR;
+        ctx.scale(DPR, DPR);
+
+        const defaultList = ["iPhone 15", "500.000 VNĐ", "Chúc may mắn", "Thẻ 100k", "Mất lượt", "Tai nghe Gaming", "Áo thun Streamer", "Thêm 1 lượt"];
+        let items = JSON.parse(localStorage.getItem("wheel_items_v2")) || defaultList;
+        let autoRemove = JSON.parse(localStorage.getItem("wheel_auto_remove")) || false;
+
+        const palette = [
+            { bg: "#ef4444", text: "#fff" },
+            { bg: "#3b82f6", text: "#fff" },
+            { bg: "#10b981", text: "#fff" },
+            { bg: "#f59e0b", text: "#fff" },
+            { bg: "#8b5cf6", text: "#fff" },
+            { bg: "#06b6d4", text: "#fff" },
+            { bg: "#ec4899", text: "#fff" },
+            { bg: "#14b8a6", text: "#fff" },
+            { bg: "#f97316", text: "#fff" },
+            { bg: "#6366f1", text: "#fff" }
+        ];
+
+        let currentAngle = 0;
+        let isSpinning = false;
+        let lastTickSlice = -1;
+        let winningIndex = 0;
+
+        function drawWheel() {
+            const num = items.length;
+            const arc = (2 * Math.PI) / num;
+            const center = CANVAS_SIZE / 2;
+            const outerRadius = center - 10;
+            const innerRadius = 35;
+
+            ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+            // 1. Viền ngoài kim loại vàng
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(center, center, outerRadius + 8, 0, 2 * Math.PI);
+            ctx.fillStyle = "#1e293b";
+            ctx.fill();
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = "#d4af37";
+            ctx.stroke();
+
+            // 2. Hệ thống đèn LED viền
+            const numLeds = 24;
+            for (let i = 0; i < numLeds; i++) {
+                const ledAngle = (i * (2 * Math.PI)) / numLeds + (currentAngle * Math.PI / 180);
+                const lx = center + (outerRadius + 4) * Math.cos(ledAngle);
+                const ly = center + (outerRadius + 4) * Math.sin(ledAngle);
+                ctx.beginPath();
+                ctx.arc(lx, ly, 3, 0, 2 * Math.PI);
+                ctx.fillStyle = (i % 2 === 0) ? "#ffd700" : "#ffffff";
+                ctx.shadowColor = "#ffd700";
+                ctx.shadowBlur = 6;
+                ctx.fill();
+            }
+            ctx.restore();
+
+            // 3. Vẽ nan quạt
+            items.forEach((item, i) => {
+                const startAngle = i * arc + (currentAngle * Math.PI / 180);
+                const endAngle = startAngle + arc;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(center, center);
+                ctx.arc(center, center, outerRadius, startAngle, endAngle);
+                ctx.closePath();
+
+                const grad = ctx.createRadialGradient(center, center, innerRadius, center, center, outerRadius);
+                const col = palette[i % palette.length];
+                grad.addColorStop(0, "#ffffff");
+                grad.addColorStop(0.15, col.bg);
+                grad.addColorStop(1, shadeColor(col.bg, -25));
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+                ctx.stroke();
+
+                // Chữ
+                ctx.translate(center, center);
+                ctx.rotate(startAngle + arc / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 15px 'Nunito', sans-serif";
+                ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
+                ctx.shadowBlur = 5;
+
+                let label = item.length > 15 ? item.substring(0, 13) + "…" : item;
+                ctx.fillText(label, outerRadius - 24, 5);
+                ctx.restore();
+            });
+
+            // Viền trong
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(center, center, 48, 0, 2 * Math.PI);
+            ctx.fillStyle = "rgba(0,0,0,0.4)";
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function shadeColor(color, percent) {
+            let num = parseInt(color.replace("#", ""), 16),
+                amt = Math.round(2.55 * percent),
+                R = (num >> 16) + amt,
+                B = (num >> 8 & 0x00FF) + amt,
+                G = (num & 0x0000FF) + amt;
+            return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (B < 255 ? B < 1 ? 0 : B : 255) * 0x100 + (G < 255 ? G < 1 ? 0 : G : 255)).toString(16).slice(1);
+        }
+
+        /* ================= VẬT LÝ QUAY ================= */
+        function spin() {
+            if (isSpinning || items.length < 2) return;
+            isSpinning = true;
+            winnerScreen.style.display = "none";
+
+            const spinDuration = 5500;
+            const startAngle = currentAngle;
+            const extraRotations = 360 * (Math.floor(Math.random() * 4) + 6);
+            const targetDelta = extraRotations + Math.random() * 360;
+            const startTime = performance.now();
+
+            function animate(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / spinDuration, 1);
+
+                const ease = 1 - Math.pow(1 - progress, 3.5);
+                currentAngle = startAngle + targetDelta * ease;
+
+                const num = items.length;
+                const sliceDegree = 360 / num;
+                const pointerAngle = (360 - (currentAngle % 360) + 270) % 360;
+                const currentSlice = Math.floor(pointerAngle / sliceDegree);
+
+                if (currentSlice !== lastTickSlice) {
+                    sfx.playTick();
+                    lastTickSlice = currentSlice;
+                }
+
+                drawWheel();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    isSpinning = false;
+                    winningIndex = currentSlice;
+                    onSpinComplete();
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function onSpinComplete() {
+            const winner = items[winningIndex];
+            winnerLabel.innerText = winner;
+            winnerScreen.style.display = "flex";
+
+            sfx.playWin();
+            burstFireworks();
+
+            if (autoRemove) {
+                items.splice(winningIndex, 1);
+                localStorage.setItem("wheel_items_v2", JSON.stringify(items));
+                itemsInput.value = items.join("\n");
+                setTimeout(drawWheel, 1000);
+            }
+        }
+
+        function burstFireworks() {
+            if (typeof confetti !== "function") return;
+            confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+            setTimeout(() => {
+                confetti({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0 } });
+                confetti({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1 } });
+            }, 250);
+        }
+
+        function closeWinner() {
+            winnerScreen.style.display = "none";
+        }
+
+        /* ================= SỰ KIỆN XÁO TRỘN (SHUFFLE) ================= */
+        // 1. Xáo nhanh trên Toolbar
+        document.getElementById("quickShuffleBtn").addEventListener("click", () => {
+            if (isSpinning) return;
+            items = shuffleArray([...items]);
+            localStorage.setItem("wheel_items_v2", JSON.stringify(items));
+            itemsInput.value = items.join("\n");
+            sfx.playShuffle();
+            drawWheel();
+        });
+
+        // 2. Xáo trộn bên trong Modal
+        document.getElementById("modalShuffleBtn").addEventListener("click", () => {
+            const lines = itemsInput.value.split("\n").map(s => s.trim()).filter(s => s.length > 0);
+            if (lines.length > 1) {
+                const shuffled = shuffleArray([...lines]);
+                itemsInput.value = shuffled.join("\n");
+                sfx.playShuffle();
+            }
+        });
+
+        /* ================= XỬ LÝ SỰ KIỆN KHÁC ================= */
+        spinBtn.addEventListener("click", spin);
+
+        const soundBtn = document.getElementById("soundToggleBtn");
+        soundBtn.addEventListener("click", () => {
+            sfx.muted = !sfx.muted;
+            soundBtn.innerText = sfx.muted ? "🔇 Tắt âm" : "🔊 Bật âm";
+        });
+
+        window.addEventListener("keydown", (e) => {
+            if (e.code === "Space" && settingsModal.style.display !== "flex") {
+                e.preventDefault();
+                spin();
+            }
+            if (e.code === "Escape") {
+                closeWinner();
+                settingsModal.style.display = "none";
+            }
+        });
+
+        /* ================= QUẢN LÝ NHẬP LIỆU ================= */
+        const settingsModal = document.getElementById("settingsModal");
+        const itemsInput = document.getElementById("itemsInput");
+        const autoRemoveCheckbox = document.getElementById("autoRemoveCheckbox");
+
+        autoRemoveCheckbox.checked = autoRemove;
+        autoRemoveCheckbox.onchange = () => {
+            autoRemove = autoRemoveCheckbox.checked;
+            localStorage.setItem("wheel_auto_remove", JSON.stringify(autoRemove));
+        };
+
+        document.getElementById("openSettingsBtn").onclick = () => {
+            itemsInput.value = items.join("\n");
+            settingsModal.style.display = "flex";
+        };
+
+        document.getElementById("closeDataBtn").onclick = () => {
+            settingsModal.style.display = "none";
+        };
+
+        document.getElementById("saveDataBtn").onclick = () => {
+            const lines = itemsInput.value.split("\n").map(s => s.trim()).filter(s => s.length > 0);
+            if (lines.length >= 2) {
+                items = lines;
+                localStorage.setItem("wheel_items_v2", JSON.stringify(items));
+                drawWheel();
+                settingsModal.style.display = "none";
+            } else {
+                alert("Vui lòng nhập ít nhất 2 dòng!");
+            }
+        };
+
+        drawWheel();
+    </script>
+</body>
+
+</html>

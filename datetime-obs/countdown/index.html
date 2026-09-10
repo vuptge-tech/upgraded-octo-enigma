@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>OBS Countdown</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: rgba(0, 0, 0, 0); 
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #timer {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 120px;
+            color: #ff4d4d; /* Màu đỏ neon cho cảm giác khẩn cấp/đếm ngược */
+            text-shadow: 0 0 20px rgba(255, 77, 77, 0.8), 4px 4px 5px rgba(0,0,0,1);
+            text-align: center;
+            user-select: none;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="timer">12:00:00</div>
+
+    <script>
+        // ============================================================
+        // CÀI ĐẶT THỜI GIAN TẠI ĐÂY
+        // ============================================================
+        let hours = 0; 
+        let minutes = 0;
+        let seconds = 10;
+        // ============================================================
+
+        // Quy đổi tất cả ra giây
+        let totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+
+        function formatTime(s) {
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            const sec = s % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+        }
+
+        function updateCountdown() {
+            if (totalSeconds <= 0) {
+                document.getElementById('timer').innerText = "00:00:00";
+                clearInterval(timerInterval); // Dừng khi về 0
+                return;
+            }
+
+            totalSeconds--; // Trừ đi 1 giây
+            document.getElementById('timer').innerText = formatTime(totalSeconds);
+        }
+
+        // Cập nhật mỗi giây
+        const timerInterval = setInterval(updateCountdown, 1000);
+        
+        // Hiển thị thời gian ban đầu ngay lập tức
+        document.getElementById('timer').innerText = formatTime(totalSeconds);
+    </script>
+</body>
+</html>

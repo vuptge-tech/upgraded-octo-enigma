@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MU Online - Thống Kê Săn 2 Thỏ</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0b0e14;
+            --panel-bg: rgba(18, 24, 38, 0.94);
+            --gold-border: #c5a059;
+            --gold-glow: rgba(197, 160, 89, 0.4);
+            --rabbit-1: #00d2ff;
+            --rabbit-2: #ff4081;
+            --text-light: #e6ebf5;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-dark); color: var(--text-light); overflow: hidden; height: 100vh; display: flex; }
+
+        /* Sidebar */
+        #sidebar {
+            width: 370px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border-right: 2px solid var(--gold-border);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+            box-shadow: 5px 0 25px rgba(0,0,0,0.8);
+            overflow-y: auto;
+        }
+
+        .game-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.25rem;
+            color: var(--gold-border);
+            text-align: center;
+            text-shadow: 0 0 10px var(--gold-glow);
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(197, 160, 89, 0.3);
+            padding-bottom: 6px;
+        }
+
+        .panel-box {
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(197, 160, 89, 0.2);
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .panel-box h3 {
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            color: var(--gold-border);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Map Selector */
+        select.map-select {
+            width: 100%;
+            background: #06080c;
+            border: 1px solid var(--gold-border);
+            color: #ffd700;
+            padding: 7px 10px;
+            border-radius: 4px;
+            font-family: 'Cinzel', serif;
+            font-weight: bold;
+            font-size: 0.88rem;
+            outline: none;
+            cursor: pointer;
+        }
+        select.map-select option { background: #0f141f; color: #fff; }
+
+        /* Realtime Coordinate */
+        .live-coord {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--gold-border);
+            text-align: center;
+            font-family: monospace;
+            background: #05070a;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px dashed rgba(197, 160, 89, 0.4);
+        }
+
+        /* Rabbit Input Cards */
+        .rabbit-input-card {
+            border-left: 3px solid;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 0 4px 4px 0;
+        }
+        .rabbit-input-card.card-1 { border-color: var(--rabbit-1); }
+        .rabbit-input-card.card-2 { border-color: var(--rabbit-2); }
+
+        .card-header {
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .card-1 .card-header { color: var(--rabbit-1); }
+        .card-2 .card-header { color: var(--rabbit-2); }
+
+        .coord-inputs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-group { flex: 1; }
+
+        .input-group label {
+            display: block;
+            font-size: 0.65rem;
+            color: #8fa0b5;
+            margin-bottom: 2px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            background: #06080c;
+            border: 1px solid rgba(197, 160, 89, 0.4);
+            color: #fff;
+            padding: 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            outline: none;
+            text-align: center;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--gold-border);
+            box-shadow: 0 0 8px var(--gold-glow);
+            background: #0d121c;
+        }
+
+        /* Buttons */
+        .btn-record {
+            width: 100%;
+            background: linear-gradient(180deg, #d4af37 0%, #8a6d1c 100%);
+            border: 1px solid #ffe89e;
+            color: #000;
+            padding: 9px;
+            font-weight: bold;
+            font-family: 'Cinzel', serif;
+            font-size: 0.78rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 4px;
+        }
+        .btn-record:hover {
+            filter: brightness(1.2);
+            box-shadow: 0 0 12px var(--gold-glow);
+        }
+
+        /* Distance Between Rabbits */
+        .dist-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #b0bec5;
+            padding: 4px 0;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            margin-top: 4px;
+        }
+        .dist-value {
+            font-family: monospace;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        /* History List */
+        .history-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.03);
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            border-left: 3px solid var(--gold-border);
+            transition: all 0.2s;
+        }
+
+        .history-item:hover {
+            background: rgba(197, 160, 89, 0.15);
+        }
+
+        .badge-count {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            border: 1px solid #ffd700;
+            padding: 2px 7px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .del-btn {
+            color: #666;
+            margin-left: 6px;
+            padding: 2px 4px;
+            font-size: 0.75rem;
+        }
+        .del-btn:hover { color: #ff3860; }
+
+        .btn-clear-all {
+            background: transparent;
+            border: none;
+            color: #888;
+            font-size: 0.7rem;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .btn-clear-all:hover { color: #ff3860; }
+
+        /* Map Container */
+        #map-container { flex: 1; height: 100vh; background: #05070a; position: relative; }
+        #map { width: 100%; height: 100%; }
+        .leaflet-container { background: #05070a; }
+
+        /* Active Rabbit Markers */
+        .active-rabbit-pin {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+            color: #fff;
+            font-weight: bold;
+            font-size: 11px;
+            animation: pulseActive 1.3s infinite;
+        }
+        .pin-r1 { background: var(--rabbit-1); box-shadow: 0 0 15px var(--rabbit-1); }
+        .pin-r2 { background: var(--rabbit-2); box-shadow: 0 0 15px var(--rabbit-2); }
+
+        @keyframes pulseActive {
+            0% { transform: scale(0.95); }
+            50% { transform: scale(1.18); }
+            100% { transform: scale(0.95); }
+        }
+
+        /* History Rabbit Marker */
+        .history-rabbit-marker {
+            width: 22px;
+            height: 22px;
+            background: rgba(14, 19, 30, 0.9);
+            border: 2px solid #ffd700;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #ffd700;
+            box-shadow: 0 0 10px rgba(0,0,0,0.8);
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .origin-badge {
+            position: absolute; top: 15px; left: 15px;
+            background: rgba(0, 0, 0, 0.85); border: 1px solid var(--gold-border);
+            padding: 6px 12px; border-radius: 4px; font-size: 0.75rem; color: var(--gold-border);
+            z-index: 500; pointer-events: none; font-family: 'Cinzel', serif;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Controls -->
+    <div id="sidebar">
+        <h1 class="game-title" id="currentMapTitle">NORIA</h1>
+
+        <!-- Map Selector Box -->
+        <div class="panel-box">
+            <h3>Chọn Bản Đồ</h3>
+            <select class="map-select" id="mapSelect" onchange="onMapChange(this.value)"></select>
+        </div>
+
+        <!-- Realtime Coordinate Display -->
+        <div class="panel-box">
+            <h3>Tọa độ con trỏ [X, Y]</h3>
+            <div class="live-coord" id="cursorCoord">X: 0 | Y: 0</div>
+        </div>
+
+        <!-- Dual Coordinates Form -->
+        <div class="panel-box">
+            <h3>Nhập Tọa Độ 2 Thỏ</h3>
+
+            <!-- Rabbit 1 -->
+            <div class="rabbit-input-card card-1">
+                <div class="card-header">
+                    <span>🐇 THỎ 1 (ĐIỂM A)</span>
+                    <span id="labelR1">[Chưa chọn]</span>
+                </div>
+                <div class="coord-inputs">
+                    <div class="input-group">
+                        <label>X (Dọc: 0-255)</label>
+                        <input type="number" id="x1" min="0" max="255" value="150" placeholder="0-255">
+                    </div>
+                    <div class="input-group">
+                        <label>Y (Ngang: 0-255)</label>
+                        <input type="number" id="y1" min="0" max="255" value="120" placeholder="0-255">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rabbit 2 -->
+            <div class="rabbit-input-card card-2">
+                <div class="card-header">
+                    <span>🐰 THỎ 2 (ĐIỂM B)</span>
+                    <span id="labelR2">[Chưa chọn]</span>
+                </div>
+                <div class="coord-inputs">
+                    <div class="input-group">
+                        <label>X (Dọc: 0-255)</label>
+                        <input type="number" id="x2" min="0" max="255" value="172" placeholder="0-255">
+                    </div>
+                    <div class="input-group">
+                        <label>Y (Ngang: 0-255)</label>
+                        <input type="number" id="y2" min="0" max="255" value="105" placeholder="0-255">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distance info between 2 rabbits -->
+            <div class="dist-info">
+                <span>Khoảng cách 2 Thỏ:</span>
+                <span class="dist-value" id="distText">-- tiles</span>
+            </div>
+
+            <button class="btn-record" onclick="recordBothSpawns()">
+                💾 Ghi Nhận Cả 2 Thỏ (+1 Lần)
+            </button>
+        </div>
+
+        <!-- History & Frequency Tracker -->
+        <div class="panel-box">
+            <h3>
+                <span>Điểm Thỏ Thường Ra Nhất</span>
+                <button class="btn-clear-all" onclick="clearMapHistory()">Xóa Map này</button>
+            </h3>
+            <ul class="history-list" id="historyListElem"></ul>
+        </div>
+    </div>
+
+    <!-- Map Viewport -->
+    <div id="map-container">
+        <div class="origin-badge" id="mapBadge">🗺️ Noria | ↖ [X:0, Y:0]</div>
+        <div id="map"></div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        const MAP_DATA = {
+            noria: { name: "Noria", img: "https://muonlinefanz.com/tools/maps/data/graphics/Noria/map.jpg" },
+            lorencia: { name: "Lorencia", img: "https://muonlinefanz.com/tools/maps/data/graphics/Lorencia/map.jpg" },
+            devias: { name: "Devias", img: "https://muonlinefanz.com/tools/maps/data/graphics/Devias/map.jpg" },
+            elveland: { name: "Elveland", img: "https://muonlinefanz.com/tools/maps/data/graphics/Elveland/map.jpg" },
+            kanturu: { name: "Kanturu Ruins", img: "https://muonlinefanz.com/tools/maps/data/graphics/Kanturu%20Ruins/map.jpg" },
+            karutan1: { name: "Karutan 1", img: "https://muonlinefanz.com/tools/maps/data/graphics/Karutan/map.jpg" },
+            karutan2: { name: "Karutan 2", img: "https://muonlinefanz.com/tools/maps/data/graphics/Karutan/map2.jpg" },
+            ferea: { name: "Ferea", img: "https://i.ibb.co/gZxjvnMj/ferea-new.png" }
+        };
+
+        const MAP_SIZE = 256;
+        const bounds = [[0, 0], [MAP_SIZE, MAP_SIZE]];
+        let currentMapKey = 'noria';
+
+        // Lấy lịch sử từ LocalStorage
+        let rabbitSpawns = JSON.parse(localStorage.getItem('MU_RABBIT_SPAWNS')) || {
+            noria: [
+                { x: 150, y: 120, count: 4 },
+                { x: 172, y: 105, count: 2 }
+            ]
+        };
+
+        function saveSpawns() {
+            localStorage.setItem('MU_RABBIT_SPAWNS', JSON.stringify(rabbitSpawns));
+        }
+
+        // Preload hình ảnh
+        Object.keys(MAP_DATA).forEach(k => { const img = new Image(); img.src = MAP_DATA[k].img; });
+
+        // Khởi tạo Dropdown Map
+        const mapSelectElem = document.getElementById('mapSelect');
+        Object.keys(MAP_DATA).forEach(key => {
+            const opt = document.createElement('option');
+            opt.value = key; opt.textContent = MAP_DATA[key].name;
+            if (key === currentMapKey) opt.selected = true;
+            mapSelectElem.appendChild(opt);
+        });
+
+        // Khởi tạo Leaflet Map
+        const map = L.map('map', {
+            crs: L.CRS.Simple, minZoom: -1, maxZoom: 3,
+            maxBounds: bounds, maxBoundsViscosity: 1.0, attributionControl: false
+        });
+
+        let currentImageOverlay = L.imageOverlay(MAP_DATA[currentMapKey].img, bounds).addTo(map);
+        map.fitBounds(bounds);
+
+        // =======================================================
+        // HỆ TỌA ĐỘ MATRIX [X, Y]: X Dọc (0-255), Y Ngang (0-255)
+        // =======================================================
+        function leafletToGame(latlng) {
+            return {
+                x: Math.max(0, Math.min(255, Math.floor(MAP_SIZE - latlng.lat))),
+                y: Math.max(0, Math.min(255, Math.floor(latlng.lng)))
+            };
+        }
+        function gameToLeaflet(x, y) {
+            return [(MAP_SIZE - 1) - x + 0.5, y + 0.5];
+        }
+
+        map.on('mousemove', function(e) {
+            const { x, y } = leafletToGame(e.latlng);
+            document.getElementById('cursorCoord').innerText = `X: ${x} | Y: ${y}`;
+        });
+
+        // =======================================================
+        // QUẢN LÝ 2 THỎ HIỆN TẠI & LỊCH SỬ
+        // =======================================================
+        let markerR1 = null, markerR2 = null;
+        let connectionLine = null;
+        let historyMarkers = [];
+        let clickToggle = 0; // 0 -> gán Thỏ 1, 1 -> gán Thỏ 2
+
+        const iconR1 = L.divIcon({
+            className: 'custom-pin-r1',
+            html: '<div class="active-rabbit-pin pin-r1">T1</div>',
+            iconSize: [28, 28], iconAnchor: [14, 14]
+        });
+
+        const iconR2 = L.divIcon({
+            className: 'custom-pin-r2',
+            html: '<div class="active-rabbit-pin pin-r2">T2</div>',
+            iconSize: [28, 28], iconAnchor: [14, 14]
+        });
+
+        function parseCoord(val) {
+            if (val === '' || isNaN(val)) return null;
+            let num = parseInt(val, 10);
+            return Math.max(0, Math.min(255, num));
+        }
+
+        // Cập nhật hiển thị 2 con thỏ thời gian thực
+        function updateActiveRabbits() {
+            const x1 = parseCoord(document.getElementById('x1').value);
+            const y1 = parseCoord(document.getElementById('y1').value);
+            const x2 = parseCoord(document.getElementById('x2').value);
+            const y2 = parseCoord(document.getElementById('y2').value);
+
+            const hasR1 = (x1 !== null && y1 !== null);
+            const hasR2 = (x2 !== null && y2 !== null);
+
+            let pos1 = null, pos2 = null;
+
+            // Xử lý Thỏ 1
+            if (hasR1) {
+                pos1 = gameToLeaflet(x1, y1);
+                if (markerR1) markerR1.setLatLng(pos1);
+                else markerR1 = L.marker(pos1, { icon: iconR1, zIndexOffset: 1000 }).addTo(map);
+                markerR1.bindPopup(`<b>🐇 THỎ 1</b>: [${x1}, ${y1}]`);
+                document.getElementById('labelR1').innerText = `[${x1}, ${y1}]`;
+            } else {
+                if (markerR1) { map.removeLayer(markerR1); markerR1 = null; }
+                document.getElementById('labelR1').innerText = `[Chưa chọn]`;
+            }
+
+            // Xử lý Thỏ 2
+            if (hasR2) {
+                pos2 = gameToLeaflet(x2, y2);
+                if (markerR2) markerR2.setLatLng(pos2);
+                else markerR2 = L.marker(pos2, { icon: iconR2, zIndexOffset: 1000 }).addTo(map);
+                markerR2.bindPopup(`<b>🐰 THỎ 2</b>: [${x2}, ${y2}]`);
+                document.getElementById('labelR2').innerText = `[${x2}, ${y2}]`;
+            } else {
+                if (markerR2) { map.removeLayer(markerR2); markerR2 = null; }
+                document.getElementById('labelR2').innerText = `[Chưa chọn]`;
+            }
+
+            // Xử lý Dây nối & Khoảng cách giữa 2 Thỏ
+            if (hasR1 && hasR2) {
+                if (connectionLine) connectionLine.setLatLngs([pos1, pos2]);
+                else {
+                    connectionLine = L.polyline([pos1, pos2], {
+                        color: '#ffd700',
+                        weight: 2.5,
+                        dashArray: '6, 8',
+                        opacity: 0.9
+                    }).addTo(map);
+                }
+
+                const dx = Math.abs(x2 - x1);
+                const dy = Math.abs(y2 - y1);
+                const dist = Math.sqrt(dx * dx + dy * dy).toFixed(1);
+                const steps = dx + dy;
+                document.getElementById('distText').innerText = `${dist} ô (~${steps} bước)`;
+            } else {
+                if (connectionLine) { map.removeLayer(connectionLine); connectionLine = null; }
+                document.getElementById('distText').innerText = `-- tiles`;
+            }
+        }
+
+        // Render toàn bộ các điểm Thỏ lịch sử lên bản đồ & Sidebar
+        function renderHistorySpawns() {
+            historyMarkers.forEach(m => map.removeLayer(m));
+            historyMarkers = [];
+
+            const listElem = document.getElementById('historyListElem');
+            listElem.innerHTML = '';
+
+            const spawns = rabbitSpawns[currentMapKey] || [];
+            spawns.sort((a, b) => b.count - a.count);
+
+            if (spawns.length === 0) {
+                listElem.innerHTML = `<li style="color:#666; font-size:0.75rem; text-align:center; padding:8px;">Chưa có lịch sử thỏ trên map này</li>`;
+                return;
+            }
+
+            spawns.forEach((item, index) => {
+                // Marker lịch sử
+                const pos = gameToLeaflet(item.x, item.y);
+                const historyIcon = L.divIcon({
+                    className: 'custom-hist-icon',
+                    html: `<div class="history-rabbit-marker" title="Thỏ ra ${item.count} lần">${item.count}</div>`,
+                    iconSize: [22, 22], iconAnchor: [11, 11]
+                });
+
+                const marker = L.marker(pos, { icon: historyIcon }).addTo(map);
+                marker.bindPopup(`<b>🐇 Điểm Thỏ</b>: [${item.x}, ${item.y}]<br><b>Đã ra: ${item.count} lần</b>`);
+                
+                marker.on('click', () => {
+                    fillCoord(item.x, item.y);
+                });
+
+                historyMarkers.push(marker);
+
+                // Item Sidebar
+                const li = document.createElement('li');
+                li.className = 'history-item';
+                li.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="color:#888; font-size:0.75rem;">#${index+1}</span>
+                        <span style="font-family:monospace; font-weight:bold; color:var(--rabbit-1)">[${item.x}, ${item.y}]</span>
+                    </div>
+                    <div style="display:flex; align-items:center;">
+                        <span class="badge-count">${item.count} lần</span>
+                        <span class="del-btn" onclick="deleteHistoryPoint(event, ${item.x}, ${item.y})" title="Xóa">✕</span>
+                    </div>
+                `;
+                li.onclick = () => fillCoord(item.x, item.y);
+                listElem.appendChild(li);
+            });
+        }
+
+        // Ghi nhận cả 2 tọa độ Thỏ vào lịch sử
+        function recordBothSpawns() {
+            const x1 = parseCoord(document.getElementById('x1').value);
+            const y1 = parseCoord(document.getElementById('y1').value);
+            const x2 = parseCoord(document.getElementById('x2').value);
+            const y2 = parseCoord(document.getElementById('y2').value);
+
+            if (!rabbitSpawns[currentMapKey]) rabbitSpawns[currentMapKey] = [];
+
+            let recorded = 0;
+
+            // Lưu Thỏ 1
+            if (x1 !== null && y1 !== null) {
+                const exist1 = rabbitSpawns[currentMapKey].find(p => p.x === x1 && p.y === y1);
+                if (exist1) exist1.count += 1;
+                else rabbitSpawns[currentMapKey].push({ x: x1, y: y1, count: 1 });
+                recorded++;
+            }
+
+            // Lưu Thỏ 2
+            if (x2 !== null && y2 !== null) {
+                const exist2 = rabbitSpawns[currentMapKey].find(p => p.x === x2 && p.y === y2);
+                if (exist2) exist2.count += 1;
+                else rabbitSpawns[currentMapKey].push({ x: x2, y: y2, count: 1 });
+                recorded++;
+            }
+
+            if (recorded === 0) {
+                alert("Vui lòng nhập ít nhất 1 tọa độ hợp lệ!");
+                return;
+            }
+
+            saveSpawns();
+            renderHistorySpawns();
+            updateActiveRabbits();
+        }
+
+        function fillCoord(x, y) {
+            if (clickToggle === 0) {
+                document.getElementById('x1').value = x;
+                document.getElementById('y1').value = y;
+                clickToggle = 1;
+            } else {
+                document.getElementById('x2').value = x;
+                document.getElementById('y2').value = y;
+                clickToggle = 0;
+            }
+            updateActiveRabbits();
+        }
+
+        function deleteHistoryPoint(e, x, y) {
+            e.stopPropagation();
+            if (!confirm(`Xóa điểm [${x}, ${y}] khỏi lịch sử?`)) return;
+            rabbitSpawns[currentMapKey] = rabbitSpawns[currentMapKey].filter(p => !(p.x === x && p.y === y));
+            saveSpawns();
+            renderHistorySpawns();
+        }
+
+        function clearMapHistory() {
+            if (!confirm(`Xóa toàn bộ lịch sử thỏ của map ${MAP_DATA[currentMapKey].name}?`)) return;
+            rabbitSpawns[currentMapKey] = [];
+            saveSpawns();
+            renderHistorySpawns();
+        }
+
+        // Lắng nghe sự kiện gõ phím trên 4 ô input
+        ['x1', 'y1', 'x2', 'y2'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => updateActiveRabbits());
+        });
+
+        // Click trên bản đồ để chọn luân phiên Thỏ 1 -> Thỏ 2
+        map.on('click', function(e) {
+            const { x, y } = leafletToGame(e.latlng);
+            fillCoord(x, y);
+        });
+
+        // Đổi bản đồ
+        function onMapChange(key) {
+            if (!MAP_DATA[key]) return;
+            currentMapKey = key;
+            currentImageOverlay.setUrl(MAP_DATA[key].img);
+            document.getElementById('currentMapTitle').innerText = MAP_DATA[key].name.toUpperCase();
+            document.getElementById('mapBadge').innerText = `🗺️ ${MAP_DATA[key].name} | ↖ [X:0, Y:0]`;
+
+            renderHistorySpawns();
+            updateActiveRabbits();
+        }
+
+        // Khởi chạy ban đầu
+        renderHistorySpawns();
+        updateActiveRabbits();
+    </script>
+</body>
+</html>

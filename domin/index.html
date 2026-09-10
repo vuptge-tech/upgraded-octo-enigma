@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesweeper AI Solver & Neural Memory Cache (6x8 - 11 Bom)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #080c14;
+            --panel-bg: rgba(26, 34, 52, 0.75);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --cell-empty: #1e293b;
+            --cell-hover: #334155;
+            --cell-clue: #0f172a;
+            
+            --accent-cyan: #38bdf8;
+            --accent-emerald: #10b981;
+            --accent-rose: #f43f5e;
+            --accent-amber: #f59e0b;
+            --accent-purple: #a855f7;
+            --accent-indigo: #6366f1;
+
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --cell-size: 52px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 5% 5%, rgba(99, 102, 241, 0.18) 0px, transparent 50%),
+                radial-gradient(at 95% 95%, rgba(56, 189, 248, 0.15) 0px, transparent 50%);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 24px 16px;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: auto 340px;
+            gap: 20px;
+            max-width: 960px;
+            width: 100%;
+        }
+
+        /* Left Side: Game Board */
+        .game-section {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .header {
+            text-align: center;
+        }
+
+        .title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .lab-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            padding: 18px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+        }
+
+        /* Status Header */
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .target-tag {
+            color: var(--accent-rose);
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .cache-status-tag {
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .cache-status-tag.hit {
+            background: rgba(16, 185, 129, 0.18);
+            color: var(--accent-emerald);
+            border-color: var(--accent-emerald);
+        }
+
+        /* Tool Palette */
+        .palette {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 6px;
+            width: 100%;
+        }
+
+        .tool-btn {
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            height: 40px;
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.15rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .tool-btn:hover {
+            background: #334155;
+            transform: translateY(-2px);
+        }
+
+        .tool-btn.active {
+            border-color: var(--accent-cyan);
+            background: rgba(56, 189, 248, 0.2);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+            transform: scale(1.04);
+        }
+
+        /* Board */
+        .board-container {
+            padding: 6px;
+            border-radius: 16px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, var(--cell-size));
+            grid-template-rows: repeat(6, var(--cell-size));
+            gap: 6px;
+        }
+
+        .cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            background: var(--cell-empty);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 800;
+            font-size: 1.25rem;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
+            transition: all 0.15s ease;
+        }
+
+        .cell:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.25);
+            z-index: 2;
+        }
+
+        .cell.clue {
+            background: var(--cell-clue);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .cell.fixed-bomb {
+            background: rgba(244, 63, 94, 0.2);
+            border-color: var(--accent-rose);
+            color: var(--accent-rose);
+        }
+
+        /* AI Results */
+        .cell.ai-safe {
+            background: rgba(16, 185, 129, 0.2) !important;
+            border: 2px solid var(--accent-emerald) !important;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.4) !important;
+        }
+
+        .cell.ai-bomb {
+            background: rgba(244, 63, 94, 0.25) !important;
+            border: 2px solid var(--accent-rose) !important;
+            box-shadow: 0 0 12px rgba(244, 63, 94, 0.5) !important;
+        }
+
+        .cell.ai-conflict {
+            background: rgba(239, 68, 68, 0.35) !important;
+            border: 2px dashed #ef4444 !important;
+        }
+
+        .safe-tag { font-size: 0.65rem; font-weight: 800; color: var(--accent-emerald); }
+        .bomb-tag { font-size: 0.65rem; font-weight: 800; color: var(--accent-rose); }
+        .prob-subtext { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700; color: var(--accent-amber); position: absolute; bottom: 3px; }
+
+        /* Number Colors */
+        .c-0 { color: #64748b; font-size: 0.9rem; }
+        .c-1 { color: #38bdf8; }
+        .c-2 { color: #34d399; }
+        .c-3 { color: #f87171; }
+        .c-4 { color: #c084fc; }
+        .c-5 { color: #fbbf24; }
+
+        /* Action Buttons */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            width: 100%;
+        }
+
+        .btn-act {
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-solve {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        }
+        .btn-solve:hover {
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+            transform: translateY(-1px);
+        }
+        .btn-secondary { background: #1e293b; color: var(--text-main); }
+        .btn-secondary:hover { background: #334155; }
+
+        .ai-log-box {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 10px 14px;
+            font-size: 0.82rem;
+            line-height: 1.4;
+            color: var(--text-muted);
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ai-log-icon { font-size: 1.3rem; }
+
+        /* Right Side: History & Memory Panel */
+        .history-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: calc(100% - 10px);
+            min-height: 480px;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .history-title {
+            font-size: 1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-clear-history {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+        }
+        .btn-clear-history:hover { color: var(--accent-rose); background: rgba(244, 63, 94, 0.1); }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            max-height: 460px;
+            padding-right: 4px;
+        }
+
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .history-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+        .history-item {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .history-item:hover {
+            border-color: var(--accent-indigo);
+            background: rgba(30, 41, 59, 0.8);
+            transform: translateX(2px);
+        }
+
+        .history-item-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+        }
+
+        .history-time { color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+        .history-stats {
+            display: flex;
+            gap: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+
+        .badge-safe { color: var(--accent-emerald); }
+        .badge-bomb { color: var(--accent-rose); }
+        .badge-speed { color: var(--accent-cyan); font-weight: 700; }
+
+        .empty-history {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            padding: 30px 10px;
+        }
+
+        @media (max-width: 860px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+            :root { --cell-size: 42px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-layout">
+        <!-- LEFT: Bàn cờ và Bảng điều khiển -->
+        <section class="game-section">
+            <header class="header">
+                <h1 class="title">⚡ AI SOLVER & NEURAL CACHE</h1>
+                <p class="subtitle">Lưới 6 × 8 • 11 Bom • Bộ nhớ đệm O(1) tăng tốc tức thì</p>
+            </header>
+
+            <main class="lab-card">
+                <!-- Info Status -->
+                <div class="info-bar">
+                    <div class="target-tag">
+                        <span>💣 Mục tiêu:</span>
+                        <span>11 Bom</span>
+                    </div>
+                    <div class="cache-status-tag" id="cache-badge">⚡ Sẵn sàng</div>
+                </div>
+
+                <!-- Palette Toolbar -->
+                <div class="palette">
+                    <button class="tool-btn active" data-tool="1" style="color: #38bdf8;">1</button>
+                    <button class="tool-btn" data-tool="2" style="color: #34d399;">2</button>
+                    <button class="tool-btn" data-tool="3" style="color: #f87171;">3</button>
+                    <button class="tool-btn" data-tool="4" style="color: #c084fc;">4</button>
+                    <button class="tool-btn" data-tool="5" style="color: #fbbf24;">5</button>
+                    <button class="tool-btn" data-tool="0" style="color: #94a3b8;">0</button>
+                    <button class="tool-btn" data-tool="B" style="color: var(--accent-rose);" title="Đặt cờ/bom">💣</button>
+                    <button class="tool-btn" data-tool="EMPTY" style="color: #cbd5e1;" title="Xóa ô">✕</button>
+                </div>
+
+                <!-- Board Container -->
+                <div class="board-container">
+                    <div id="board" class="board"></div>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="actions-grid">
+                    <button id="btn-run" class="btn-act btn-solve">
+                        <span>✨</span> Chẩn Đoán AI
+                    </button>
+                    <button id="btn-example" class="btn-act btn-secondary">
+                        <span>📑</span> Nạp Đề Mẫu
+                    </button>
+                    <button id="btn-clear" class="btn-act btn-secondary">
+                        <span>🗑️</span> Xóa Trắng
+                    </button>
+                </div>
+
+                <!-- Smart Diagnostic Log -->
+                <div id="ai-log" class="ai-log-box">
+                    <span class="ai-log-icon">💡</span>
+                    <span class="ai-log-text" id="log-content">Điền số vào ô. Nếu đã từng giải qua, AI sẽ nhận diện ngay trong <b>0.00 ms</b>.</span>
+                </div>
+            </main>
+        </section>
+
+        <!-- RIGHT: Lịch sử & Bộ nhớ Cache -->
+        <aside class="history-card">
+            <div class="history-header">
+                <div class="history-title">
+                    <span>🧠</span> Bộ Nhớ Thế Cờ
+                </div>
+                <button id="btn-clear-cache" class="btn-clear-history" title="Xóa toàn bộ lịch sử đã lưu">Xóa Bộ Nhớ</button>
+            </div>
+            
+            <div id="history-container" class="history-list">
+                <!-- Danh sách lịch sử sẽ tự động render tại đây -->
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        const ROWS = 6;
+        const COLS = 8;
+        const TOTAL_MINES = 11;
+        const STORAGE_KEY = 'minesweeper_solver_cache_v2';
+
+        let activeTool = '1';
+        let grid = [];
+        let memoryCache = {}; // In-memory hash table
+
+        const boardEl = document.getElementById('board');
+        const logContent = document.getElementById('log-content');
+        const cacheBadge = document.getElementById('cache-badge');
+        const historyContainer = document.getElementById('history-container');
+        const toolBtns = document.querySelectorAll('.tool-btn');
+
+        // Load Cache from LocalStorage
+        function loadMemoryFromStorage() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    memoryCache = JSON.parse(stored);
+                }
+            } catch (e) {
+                memoryCache = {};
+            }
+            renderHistoryList();
+        }
+
+        function saveMemoryToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryCache));
+            } catch (e) {
+                console.warn('LocalStorage limit reached');
+            }
+            renderHistoryList();
+        }
+
+        // Initialize 6x8 Board
+        function initGrid() {
+            grid = [];
+            boardEl.innerHTML = '';
+            for (let r = 0; r < ROWS; r++) {
+                grid[r] = [];
+                for (let c = 0; c < COLS; c++) {
+                    grid[r][c] = {
+                        r, c,
+                        type: 'EMPTY',
+                        clueVal: null,
+                        el: null
+                    };
+
+                    const cellEl = document.createElement('div');
+                    cellEl.classList.add('cell');
+                    cellEl.dataset.r = r;
+                    cellEl.dataset.c = c;
+
+                    cellEl.addEventListener('click', () => applyTool(r, c));
+                    cellEl.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        grid[r][c].type = 'EMPTY';
+                        grid[r][c].clueVal = null;
+                        renderCell(grid[r][c]);
+                        solveAndDiagnose();
+                    });
+
+                    grid[r][c].el = cellEl;
+                    boardEl.appendChild(cellEl);
+                }
+            }
+        }
+
+        // Tool Selection
+        toolBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                toolBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                activeTool = btn.dataset.tool;
+            });
+        });
+
+        // Fast Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            if (['0','1','2','3','4','5'].includes(e.key)) {
+                setActiveTool(e.key);
+            } else if (e.key.toLowerCase() === 'b') {
+                setActiveTool('B');
+            } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === 'x') {
+                setActiveTool('EMPTY');
+            }
+        });
+
+        function setActiveTool(tool) {
+            activeTool = tool;
+            toolBtns.forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
+        }
+
+        function applyTool(r, c) {
+            const cell = grid[r][c];
+            if (activeTool === 'EMPTY') {
+                cell.type = 'EMPTY';
+                cell.clueVal = null;
+            } else if (activeTool === 'B') {
+                cell.type = 'FIXED_BOMB';
+                cell.clueVal = null;
+            } else {
+                cell.type = 'CLUE';
+                cell.clueVal = parseInt(activeTool, 10);
+            }
+
+            renderCell(cell);
+            solveAndDiagnose();
+        }
+
+        function renderCell(cell) {
+            const el = cell.el;
+            el.className = 'cell';
+            el.innerHTML = '';
+            if (cell.type === 'CLUE') {
+                el.classList.add('clue', `c-${cell.clueVal}`);
+                el.textContent = cell.clueVal;
+            } else if (cell.type === 'FIXED_BOMB') {
+                el.classList.add('fixed-bomb');
+                el.textContent = '💣';
+            }
+        }
+
+        function getNeighbors(r, c) {
+            const list = [];
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    const nr = r + dr;
+                    const nc = c + dc;
+                    if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                        list.push(grid[nr][nc]);
+                    }
+                }
+            }
+            return list;
+        }
+
+        /* -------------------------------------------------------------
+           BOARD SERIALIZATION & HASHING ENGINE
+        ------------------------------------------------------------- */
+        function computeBoardHash() {
+            let hashStr = '';
+            let hasClue = false;
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const cell = grid[r][c];
+                    if (cell.type === 'EMPTY') hashStr += '.';
+                    else if (cell.type === 'FIXED_BOMB') { hashStr += 'B'; hasClue = true; }
+                    else { hashStr += cell.clueVal; hasClue = true; }
+                }
+            }
+            return hasClue ? hashStr : null;
+        }
+
+        /* -------------------------------------------------------------
+           SMART DIAGNOSTIC ENGINE WITH MEMORY CACHE
+        ------------------------------------------------------------- */
+        function solveAndDiagnose() {
+            const startTime = performance.now();
+
+            // Clear visual decorations
+            grid.flat().forEach(c => {
+                if (c.type === 'EMPTY') {
+                    c.el.className = 'cell';
+                    c.el.innerHTML = '';
+                }
+                c.el.classList.remove('ai-conflict');
+            });
+
+            const hash = computeBoardHash();
+            if (!hash) {
+                logContent.innerHTML = 'Điền số từ <b>1 đến 5</b> vào bàn cờ để hệ thống chẩn đoán.';
+                cacheBadge.textContent = '⚡ Chờ dữ liệu';
+                cacheBadge.classList.remove('hit');
+                return;
+            }
+
+            // ⚡ KIỂM TRA BỘ NHỚ ĐỆM (CACHE HIT CHECK)
+            if (memoryCache[hash]) {
+                const cached = memoryCache[hash];
+                applySolutionResults(cached.results);
+                const elapsed = (performance.now() - startTime).toFixed(2);
+                
+                cacheBadge.innerHTML = `⚡ Cache Hit (${elapsed} ms)`;
+                cacheBadge.classList.add('hit');
+                logContent.innerHTML = `<b>[Trích xuất từ Bộ Nhớ]</b> ${cached.summary}`;
+                return;
+            }
+
+            // NẾU CHƯA CÓ TRONG CACHE: TIẾN HÀNH GIẢI MỚI
+            cacheBadge.textContent = '⚙️ Đang phân tích...';
+            cacheBadge.classList.remove('hit');
+
+            const clues = grid.flat().filter(c => c.type === 'CLUE');
+            const fixedBombs = grid.flat().filter(c => c.type === 'FIXED_BOMB');
+            const emptyCells = grid.flat().filter(c => c.type === 'EMPTY');
+
+            // 1. Kiểm tra mâu thuẫn cục bộ
+            for (let clue of clues) {
+                const neighbors = getNeighbors(clue.r, clue.c);
+                const nBombs = neighbors.filter(n => n.type === 'FIXED_BOMB').length;
+                const nEmpty = neighbors.filter(n => n.type === 'EMPTY').length;
+
+                if (nBombs > clue.clueVal || (nBombs + nEmpty) < clue.clueVal) {
+                    clue.el.classList.add('ai-conflict');
+                    logContent.innerHTML = `<span style="color:var(--accent-rose);font-weight:700">Mâu thuẫn logic tại ô [${clue.r + 1}, ${clue.c + 1}]!</span>`;
+                    cacheBadge.textContent = '❌ Mâu thuẫn';
+                    return;
+                }
+            }
+
+            // 2. Tách biến biên (Boundary Extraction)
+            const boundaryMap = new Map();
+            const boundaryList = [];
+
+            emptyCells.forEach(cell => {
+                const adjClues = getNeighbors(cell.r, cell.c).filter(n => n.type === 'CLUE');
+                if (adjClues.length > 0) {
+                    boundaryMap.set(`${cell.r},${cell.c}`, boundaryList.length);
+                    boundaryList.push(cell);
+                }
+            });
+
+            const nonBoundaryEmpty = emptyCells.filter(c => !boundaryMap.has(`${c.r},${c.c}`));
+
+            // 3. Chuẩn bị ràng buộc
+            const constraintList = clues.map(clue => {
+                const neighbors = getNeighbors(clue.r, clue.c);
+                const fixedCount = neighbors.filter(n => n.type === 'FIXED_BOMB').length;
+                const varIndices = [];
+                neighbors.forEach(n => {
+                    const key = `${n.r},${n.c}`;
+                    if (boundaryMap.has(key)) varIndices.push(boundaryMap.get(key));
+                });
+                return { required: clue.clueVal - fixedCount, vars: varIndices };
+            });
+
+            const numVars = boundaryList.length;
+            const assignment = new Array(numVars).fill(0);
+            let validConfigsCount = 0;
+            const mineCountPerVar = new Array(numVars).fill(0);
+
+            const varToConstraints = Array.from({ length: numVars }, () => []);
+            constraintList.forEach((c, cIdx) => {
+                c.vars.forEach(v => varToConstraints[v].push(cIdx));
+            });
+
+            function nCr(n, r) {
+                if (r < 0 || r > n) return 0;
+                if (r === 0 || r === n) return 1;
+                let res = 1;
+                for (let i = 1; i <= r; i++) res = res * (n - (r - i)) / i;
+                return res;
+            }
+
+            function backtrack(idx, currentMines) {
+                if (currentMines + fixedBombs.length > TOTAL_MINES) return;
+
+                if (idx === numVars) {
+                    for (let c of constraintList) {
+                        let sum = 0;
+                        for (let v of c.vars) sum += assignment[v];
+                        if (sum !== c.required) return;
+                    }
+
+                    const rem = TOTAL_MINES - (fixedBombs.length + currentMines);
+                    const combos = nCr(nonBoundaryEmpty.length, rem);
+
+                    if (combos > 0) {
+                        validConfigsCount += combos;
+                        for (let i = 0; i < numVars; i++) {
+                            if (assignment[i] === 1) mineCountPerVar[i] += combos;
+                        }
+                    }
+                    return;
+                }
+
+                for (let val of [0, 1]) {
+                    assignment[idx] = val;
+                    const nextMines = currentMines + val;
+                    let possible = true;
+
+                    for (let cIdx of varToConstraints[idx]) {
+                        const constr = constraintList[cIdx];
+                        let assignedSum = 0;
+                        let unassigned = 0;
+                        for (let v of constr.vars) {
+                            if (v <= idx) assignedSum += assignment[v];
+                            else unassigned++;
+                        }
+                        if (assignedSum > constr.required || assignedSum + unassigned < constr.required) {
+                            possible = false;
+                            break;
+                        }
+                    }
+
+                    if (possible) backtrack(idx + 1, nextMines);
+                }
+            }
+
+            backtrack(0, 0);
+
+            const elapsed = (performance.now() - startTime).toFixed(2);
+
+            if (validConfigsCount === 0) {
+                logContent.innerHTML = `<span style="color:var(--accent-rose);font-weight:700">Thế cờ vô nghiệm! Không thể xếp đủ 11 bom.</span>`;
+                cacheBadge.textContent = '❌ Không có nghiệm';
+                return;
+            }
+
+            // Gom kết quả giải
+            const results = [];
+            let safeCount = 0;
+            let bombCount = 0;
+
+            boundaryList.forEach((cell, idx) => {
+                const prob = mineCountPerVar[idx] / validConfigsCount;
+                results.push({ r: cell.r, c: cell.c, prob });
+                if (prob === 0) safeCount++;
+                if (prob === 1) bombCount++;
+            });
+
+            applySolutionResults(results);
+
+            let summaryText = `Tìm thấy <b style="color:var(--accent-emerald)">${safeCount} ô an toàn</b>, <b style="color:var(--accent-rose)">${bombCount} quả bom</b> trong ${validConfigsCount} cấu hình.`;
+            logContent.innerHTML = summaryText;
+            cacheBadge.textContent = `⚡ Đã giải & Lưu (${elapsed} ms)`;
+
+            // 💾 LƯU KẾT QUẢ VÀO CACHE & LỊCH SỬ
+            memoryCache[hash] = {
+                hash,
+                boardData: extractCompactBoard(),
+                results,
+                summary: summaryText,
+                safeCount,
+                bombCount,
+                configs: validConfigsCount,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                solveTime: elapsed
+            };
+
+            saveMemoryToStorage();
+        }
+
+        function applySolutionResults(results) {
+            results.forEach(res => {
+                const cell = grid[res.r][res.c];
+                if (cell.type === 'EMPTY') {
+                    if (res.prob === 0) {
+                        cell.el.classList.add('ai-safe');
+                        cell.el.innerHTML = '<span class="safe-tag">✓ AN TOÀN</span>';
+                    } else if (res.prob === 1) {
+                        cell.el.classList.add('ai-bomb');
+                        cell.el.innerHTML = '<span class="bomb-tag">💣 BOM</span>';
+                    } else {
+                        const percent = Math.round(res.prob * 100);
+                        cell.el.innerHTML = `<span class="prob-subtext">${percent}%💣</span>`;
+                    }
+                }
+            });
+        }
+
+        function extractCompactBoard() {
+            return grid.map(row => row.map(c => ({
+                t: c.type,
+                v: c.clueVal
+            })));
+        }
+
+        /* -------------------------------------------------------------
+           HISTORY PANEL RENDERING
+        ------------------------------------------------------------- */
+        function renderHistoryList() {
+            const items = Object.values(memoryCache).reverse();
+            if (items.length === 0) {
+                historyContainer.innerHTML = `<div class="empty-history">Chưa có thế cờ nào trong bộ nhớ.<br>Hãy điền số và chạy chẩn đoán để lưu!</div>`;
+                return;
+            }
+
+            historyContainer.innerHTML = '';
+            items.slice(0, 15).forEach((item) => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <div class="history-item-top">
+                        <span class="history-time">⏱️ ${item.timestamp}</span>
+                        <span class="badge-speed">${item.solveTime} ms</span>
+                    </div>
+                    <div class="history-stats">
+                        <span class="badge-safe">✓ ${item.safeCount} An Toàn</span>
+                        <span class="badge-bomb">💣 ${item.bombCount} Bom</span>
+                    </div>
+                `;
+
+                div.addEventListener('click', () => loadBoardFromHistory(item));
+                historyContainer.appendChild(div);
+            });
+        }
+
+        function loadBoardFromHistory(item) {
+            initGrid();
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const saved = item.boardData[r][c];
+                    grid[r][c].type = saved.t;
+                    grid[r][c].clueVal = saved.v;
+                    renderCell(grid[r][c]);
+                }
+            }
+            solveAndDiagnose();
+        }
+
+        // Action Handlers
+        document.getElementById('btn-clear-cache').addEventListener('click', () => {
+            if (confirm('Bạn có chắc muốn xóa sạch toàn bộ lịch sử bộ nhớ đệm?')) {
+                memoryCache = {};
+                localStorage.removeItem(STORAGE_KEY);
+                renderHistoryList();
+                solveAndDiagnose();
+            }
+        });
+
+        document.getElementById('btn-example').addEventListener('click', () => {
+            initGrid();
+            const sample = [
+                {r: 2, c: 2, v: 1}, {r: 2, c: 3, v: 2}, {r: 2, c: 4, v: 1},
+                {r: 3, c: 2, v: 1}, {r: 3, c: 4, v: 1}
+            ];
+            sample.forEach(s => {
+                grid[s.r][s.c].type = 'CLUE';
+                grid[s.r][s.c].clueVal = s.v;
+                renderCell(grid[s.r][s.c]);
+            });
+            solveAndDiagnose();
+        });
+
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            initGrid();
+            logContent.innerHTML = 'Bàn cờ đã làm mới. Chọn số để bắt đầu.';
+            cacheBadge.textContent = '⚡ Đã làm mới';
+            cacheBadge.classList.remove('hit');
+        });
+
+        document.getElementById('btn-run').addEventListener('click', solveAndDiagnose);
+
+        // Khởi động
+        initGrid();
+        loadMemoryFromStorage();
+    </script>
+</body>
+</html>

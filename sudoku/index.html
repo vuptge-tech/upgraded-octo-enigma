@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sudoku Master with Smart Hint</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #f8fafc;
+      --board-bg: #ffffff;
+      --border-outer: #0f172a;
+      --border-block: #334155;
+      --border-cell: #e2e8f0;
+      --text-given: #0f172a;
+      --text-user: #2563eb;
+      --text-hint: #d97706; /* Màu vàng hổ phách cho số gợi ý */
+      --highlight-active: #bfdbfe;
+      --highlight-cross: #f1f5f9;
+      --highlight-match: #dbeafe;
+      --primary-color: #2563eb;
+      --primary-hover: #1d4ed8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-given);
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+    }
+
+    /* Thanh điều khiển trên cùng */
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    select.btn-control {
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #334155;
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    button.btn-primary {
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+      background: var(--primary-color);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+      transition: background 0.2s;
+    }
+
+    button.btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    /* Nút gợi ý */
+    button.btn-hint {
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #b45309;
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    button.btn-hint:hover:not(:disabled) {
+      background: #fde68a;
+      transform: translateY(-1px);
+    }
+
+    button.btn-hint:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Khung bàn cờ */
+    .sudoku-board {
+      display: grid;
+      grid-template-columns: repeat(9, 44px);
+      grid-template-rows: repeat(9, 44px);
+      background-color: var(--board-bg);
+      border: 3px solid var(--border-outer);
+      border-radius: 8px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    @media (min-width: 480px) {
+      .sudoku-board {
+        grid-template-columns: repeat(9, 50px);
+        grid-template-rows: repeat(9, 50px);
+      }
+    }
+
+    .cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      cursor: pointer;
+      border-right: 1px solid var(--border-cell);
+      border-bottom: 1px solid var(--border-cell);
+      transition: background-color 0.1s ease;
+    }
+
+    /* Viền khối 3x3 */
+    .cell:nth-child(3n) { border-right: 2px solid var(--border-block); }
+    .cell:nth-child(9n) { border-right: none; }
+    .cell:nth-child(n+19):nth-child(-n+27),
+    .cell:nth-child(n+46):nth-child(-n+54) {
+      border-bottom: 2px solid var(--border-block);
+    }
+    .cell:nth-child(n+73):nth-child(-n+81) { border-bottom: none; }
+
+    /* Định kiểu dữ liệu trong ô */
+    .cell.given {
+      font-weight: 700;
+      color: var(--text-given);
+    }
+
+    .cell.user-filled {
+      font-weight: 600;
+      color: var(--text-user);
+    }
+
+    /* Hiệu ứng ô được gợi ý */
+    .cell.hinted {
+      font-weight: 700;
+      color: var(--text-hint) !important;
+    }
+
+    .cell.just-hinted {
+      animation: hintGlow 1.2s ease-out;
+    }
+
+    @keyframes hintGlow {
+      0% {
+        background-color: #fef08a !important;
+        transform: scale(1.15);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    /* Highlight */
+    .cell.active { background-color: var(--highlight-active) !important; }
+    .cell.crosshair { background-color: var(--highlight-cross); }
+    .cell.match { background-color: var(--highlight-match); }
+
+    /* Numpad */
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-top: 24px;
+      max-width: 450px;
+      width: 100%;
+    }
+
+    .btn-num {
+      padding: 12px 0;
+      font-size: 18px;
+      font-weight: 600;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: white;
+      color: var(--text-given);
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+      transition: all 0.15s ease;
+    }
+
+    .btn-num:hover { background-color: #f1f5f9; }
+    .btn-num:active { transform: scale(0.96); }
+    .btn-delete {
+      grid-column: span 2;
+      background-color: #fee2e2;
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    .btn-delete:hover { background-color: #fca5a5; }
+  </style>
+</head>
+<body>
+
+  <h1>SUDOKU</h1>
+
+  <!-- Controls -->
+  <div class="controls">
+    <select id="difficulty" class="btn-control">
+      <option value="easy">Dễ (Easy)</option>
+      <option value="medium" selected>Trung Bình (Medium)</option>
+      <option value="hard">Khó (Hard)</option>
+      <option value="expert">Chuyên Gia (Expert)</option>
+    </select>
+    <button class="btn-primary" onclick="startNewGame()">Ván Mới</button>
+    <button class="btn-hint" id="hint-btn" onclick="getHint()">
+      💡 Gợi ý (<span id="hint-count">3</span>)
+    </button>
+  </div>
+
+  <!-- Board -->
+  <div class="sudoku-board" id="board"></div>
+
+  <!-- Numpad -->
+  <div class="numpad">
+    <button class="btn-num" onclick="handleInput(1)">1</button>
+    <button class="btn-num" onclick="handleInput(2)">2</button>
+    <button class="btn-num" onclick="handleInput(3)">3</button>
+    <button class="btn-num" onclick="handleInput(4)">4</button>
+    <button class="btn-num" onclick="handleInput(5)">5</button>
+    <button class="btn-num" onclick="handleInput(6)">6</button>
+    <button class="btn-num" onclick="handleInput(7)">7</button>
+    <button class="btn-num" onclick="handleInput(8)">8</button>
+    <button class="btn-num" onclick="handleInput(9)">9</button>
+    <button class="btn-num btn-delete" onclick="handleInput(0)">Xóa (Del)</button>
+  </div>
+
+  <script>
+    // 1. ENGINE SINH ĐỀ VÀ NGHIỆM
+    class SudokuGenerator {
+      constructor() {
+        this.board = Array.from({ length: 9 }, () => Array(9).fill(0));
+      }
+
+      shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      isValid(board, row, col, num) {
+        for (let i = 0; i < 9; i++) {
+          if (board[row][i] === num || board[i][col] === num) return false;
+        }
+        const startRow = Math.floor(row / 3) * 3;
+        const startCol = Math.floor(col / 3) * 3;
+        for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < 3; c++) {
+            if (board[startRow + r][startCol + c] === num) return false;
+          }
+        }
+        return true;
+      }
+
+      fillDiagonalBoxes() {
+        for (let box = 0; box < 9; box += 3) {
+          const numbers = this.shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+          let idx = 0;
+          for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+              this.board[box + r][box + c] = numbers[idx++];
+            }
+          }
+        }
+      }
+
+      fillRemaining(row = 0, col = 0) {
+        if (row === 9) return true;
+        if (col === 9) return this.fillRemaining(row + 1, 0);
+        if (this.board[row][col] !== 0) return this.fillRemaining(row, col + 1);
+
+        const numbers = this.shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        for (let num of numbers) {
+          if (this.isValid(this.board, row, col, num)) {
+            this.board[row][col] = num;
+            if (this.fillRemaining(row, col + 1)) return true;
+            this.board[row][col] = 0;
+          }
+        }
+        return false;
+      }
+
+      countSolutions(board, counter = { count: 0 }) {
+        let emptyCell = null;
+        for (let r = 0; r < 9; r++) {
+          for (let c = 0; c < 9; c++) {
+            if (board[r][c] === 0) {
+              emptyCell = { r, c };
+              break;
+            }
+          }
+          if (emptyCell) break;
+        }
+
+        if (!emptyCell) {
+          counter.count++;
+          return;
+        }
+
+        const { r, c } = emptyCell;
+        for (let num = 1; num <= 9; num++) {
+          if (this.isValid(board, r, c, num)) {
+            board[r][c] = num;
+            this.countSolutions(board, counter);
+            board[r][c] = 0;
+            if (counter.count >= 2) return;
+          }
+        }
+      }
+
+      removeNumbers(targetClues) {
+        let puzzle = JSON.parse(JSON.stringify(this.board));
+        let positions = [];
+        for (let r = 0; r < 9; r++) {
+          for (let c = 0; c < 9; c++) {
+            positions.push({ r, c });
+          }
+        }
+        positions = this.shuffle(positions);
+
+        let clues = 81;
+        for (let pos of positions) {
+          if (clues <= targetClues) break;
+          const { r, c } = pos;
+          const backup = puzzle[r][c];
+          puzzle[r][c] = 0;
+
+          let testBoard = JSON.parse(JSON.stringify(puzzle));
+          let counter = { count: 0 };
+          this.countSolutions(testBoard, counter);
+
+          if (counter.count !== 1) {
+            puzzle[r][c] = backup;
+          } else {
+            clues--;
+          }
+        }
+        return puzzle;
+      }
+
+      generate(difficulty = 'medium') {
+        const targets = { easy: 40, medium: 32, hard: 28, expert: 24 };
+        const target = targets[difficulty] || 32;
+
+        this.board = Array.from({ length: 9 }, () => Array(9).fill(0));
+        this.fillDiagonalBoxes();
+        this.fillRemaining();
+        
+        const solution = JSON.parse(JSON.stringify(this.board));
+        const puzzle = this.removeNumbers(target);
+
+        return { puzzle, solution };
+      }
+    }
+
+    // 2. GAME STATE & LOGIC
+    const engine = new SudokuGenerator();
+    let initialPuzzle = [];
+    let solutionBoard = [];
+    let currentBoard = [];
+    let hintedCells = new Set(); // Lưu danh sách các ô đã nhận gợi ý
+    let hintsRemaining = 3;
+    let selectedCell = null;
+    let lastHintedCoord = null;
+    const boardElement = document.getElementById("board");
+
+    function startNewGame() {
+      const difficulty = document.getElementById("difficulty").value;
+      const data = engine.generate(difficulty);
+      
+      initialPuzzle = data.puzzle;
+      solutionBoard = data.solution;
+      currentBoard = JSON.parse(JSON.stringify(initialPuzzle));
+      
+      hintedCells.clear();
+      hintsRemaining = 3;
+      selectedCell = null;
+      lastHintedCoord = null;
+
+      updateHintButton();
+      renderBoard();
+    }
+
+    function updateHintButton() {
+      const hintCountSpan = document.getElementById("hint-count");
+      const hintBtn = document.getElementById("hint-btn");
+      hintCountSpan.textContent = hintsRemaining;
+      hintBtn.disabled = hintsRemaining <= 0;
+    }
+
+    function renderBoard() {
+      boardElement.innerHTML = "";
+      for (let r = 0; r < 9; r++) {
+        for (let c = 0; c < 9; c++) {
+          const cell = document.createElement("div");
+          cell.classList.add("cell");
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+
+          const val = currentBoard[r][c];
+          const isGiven = initialPuzzle[r][c] !== 0;
+          const isHinted = hintedCells.has(`${r}-${c}`);
+
+          if (val !== 0) {
+            cell.textContent = val;
+            if (isGiven) {
+              cell.classList.add("given");
+            } else if (isHinted) {
+              cell.classList.add("hinted");
+            } else {
+              cell.classList.add("user-filled");
+            }
+          }
+
+          if (lastHintedCoord && lastHintedCoord.r === r && lastHintedCoord.c === c) {
+            cell.classList.add("just-hinted");
+          }
+
+          cell.addEventListener("click", () => selectCell(r, c));
+          boardElement.appendChild(cell);
+        }
+      }
+    }
+
+    function selectCell(r, c) {
+      selectedCell = { row: r, col: c };
+      const selectedVal = currentBoard[r][c];
+      const cells = document.querySelectorAll(".cell");
+
+      cells.forEach(cell => {
+        const cellR = parseInt(cell.dataset.row);
+        const cellC = parseInt(cell.dataset.col);
+        const cellVal = currentBoard[cellR][cellC];
+
+        cell.classList.remove("active", "crosshair", "match");
+
+        if (cellR === r && cellC === c) {
+          cell.classList.add("active");
+        } else if (cellR === r || cellC === c) {
+          cell.classList.add("crosshair");
+        }
+        
+        if (selectedVal !== 0 && cellVal === selectedVal && !(cellR === r && cellC === c)) {
+          cell.classList.add("match");
+        }
+      });
+    }
+
+    function handleInput(num) {
+      if (!selectedCell) return;
+      const { row, col } = selectedCell;
+
+      // Không sửa ô cố định hoặc ô đã được gợi ý
+      if (initialPuzzle[row][col] !== 0 || hintedCells.has(`${row}-${col}`)) return;
+
+      currentBoard[row][col] = num;
+      lastHintedCoord = null;
+      renderBoard();
+      selectCell(row, col);
+    }
+
+    // TÍNH NĂNG GỢI Ý THÔNG MINH
+    function getHint() {
+      if (hintsRemaining <= 0) return;
+
+      let targetR = -1;
+      let targetC = -1;
+
+      // TH1: Người chơi đang chọn một ô còn trống hoặc điền sai
+      if (selectedCell) {
+        const { row, col } = selectedCell;
+        if (initialPuzzle[row][col] === 0 && currentBoard[row][col] !== solutionBoard[row][col]) {
+          targetR = row;
+          targetC = col;
+        }
+      }
+
+      // TH2: Tự động quét tìm một ô trống hoặc ô điền sai ngẫu nhiên
+      if (targetR === -1) {
+        let candidates = [];
+        for (let r = 0; r < 9; r++) {
+          for (let c = 0; c < 9; c++) {
+            if (initialPuzzle[r][c] === 0 && currentBoard[r][c] !== solutionBoard[r][c]) {
+              candidates.push({ r, c });
+            }
+          }
+        }
+
+        if (candidates.length === 0) {
+          alert("🎉 Bạn đã điền chính xác toàn bộ bàn cờ!");
+          return;
+        }
+
+        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+        targetR = chosen.r;
+        targetC = chosen.c;
+      }
+
+      // Điền đáp án đúng
+      currentBoard[targetR][targetC] = solutionBoard[targetR][targetC];
+      hintedCells.add(`${targetR}-${targetC}`);
+      lastHintedCoord = { r: targetR, c: targetC };
+      
+      hintsRemaining--;
+      updateHintButton();
+      renderBoard();
+      selectCell(targetR, targetC);
+    }
+
+    // Lắng nghe phím máy tính
+    window.addEventListener("keydown", (e) => {
+      if (e.key >= "1" && e.key <= "9") {
+        handleInput(parseInt(e.key));
+      } else if (e.key === "Backspace" || e.key === "Delete" || e.key === "0") {
+        handleInput(0);
+      } else if (e.key.toLowerCase() === "h") {
+        getHint(); // Phím tắt H để lấy gợi ý
+      }
+    });
+
+    startNewGame();
+  </script>
+</body>
+</html>

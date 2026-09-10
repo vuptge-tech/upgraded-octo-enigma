@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>OBS Date Time</title>
+    <!-- Font đơn cách chống nhảy số -->
+    <style>
+		@font-face {
+		font-family: 'digitalfont';
+		src: url('../digital-7-mono.ttf');
+		}
+		
+        body {
+            background-color: rgba(0, 0, 0, 0); /* Nền trong suốt */
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #datetime {
+            font-family: 'digitalfont', monospace;
+            font-size: 80px; /* Bạn có thể chỉnh to nhỏ tùy ý */
+            color: #09ff00;  /* Màu xanh Neon */
+            text-shadow: 0 0 20px rgba(0, 255, 242, 0.8), 4px 4px 5px rgba(0,0,0,1);
+            text-align: center;
+            user-select: none;
+            
+            /* Chống nhảy số */
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="datetime">00/00/0000 00:00:00</div>
+
+    <script>
+        function updateDateTime() {
+            const now = new Date();
+
+            // Lấy ngày, tháng, năm
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0'); // Tháng trong JS bắt đầu từ 0
+            const year = now.getFullYear();
+
+            // Lấy giờ, phút, giây
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+
+            // Ghép lại đúng định dạng dd/mm/yyyy hh:mm:ss
+            const formattedString = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+            
+            document.getElementById('datetime').innerText = formattedString;
+        }
+
+        // Cập nhật mỗi giây
+        setInterval(updateDateTime, 1000);
+
+        // Chạy ngay lập tức khi vừa load trang
+        updateDateTime();
+    </script>
+</body>
+</html>

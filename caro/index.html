@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gomoku Pro - Ultra Intuitive UI Edition</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #0b0f19;
+      --bg-surface: #151d30;
+      --bg-cell: #1a233a;
+      --bg-cell-hover: #263352;
+      --color-x: #38bdf8;
+      --glow-x: rgba(56, 189, 248, 0.45);
+      --color-o: #f43f5e;
+      --glow-o: rgba(244, 63, 94, 0.45);
+      --win-color: #facc15;
+      --win-glow: rgba(250, 204, 21, 0.7);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --primary: #6366f1;
+      --active-green: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      user-select: none;
+    }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% 10%, #1e293b 0%, var(--bg-main) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      color: #f8fafc;
+    }
+
+    .game-header {
+      text-align: center;
+      margin-bottom: 12px;
+      width: 100%;
+      max-width: 580px;
+    }
+
+    .title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    .control-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .select-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: #e2e8f0;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .select-pill:hover { border-color: var(--primary); }
+
+    /* BẢNG ĐIỂM THÔNG MINH */
+    .scoreboard {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .score-card {
+      background: var(--bg-surface);
+      border: 2px solid var(--border-color);
+      padding: 10px 14px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    /* Hiệu ứng khi đến lượt */
+    .score-card.active-turn {
+      border-color: #38bdf8;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+      transform: translateY(-3px) scale(1.02);
+      background: #1b2640;
+    }
+    .score-card.active-turn.is-o {
+      border-color: #f43f5e;
+      box-shadow: 0 0 20px rgba(244, 63, 94, 0.35);
+    }
+
+    .player-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      text-align: left;
+    }
+    .score-card:last-child .player-info {
+      text-align: right;
+    }
+
+    .player-title-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .score-card:last-child .player-title-row {
+      justify-content: flex-end;
+    }
+
+    .player-avatar {
+      font-size: 1rem;
+    }
+
+    .player-name {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+
+    .piece-tag {
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 6px;
+    }
+    .piece-tag.tag-x { background: rgba(56, 189, 248, 0.15); color: var(--color-x); border: 1px solid var(--color-x); }
+    .piece-tag.tag-o { background: rgba(244, 63, 94, 0.15); color: var(--color-o); border: 1px solid var(--color-o); }
+
+    /* Đèn tín hiệu lượt đánh */
+    .status-badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 10px;
+      width: fit-content;
+    }
+    .score-card:last-child .status-badge-live {
+      margin-left: auto;
+    }
+
+    .status-badge-live.turn-active {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      animation: pulseGreen 1.2s infinite alternate;
+    }
+
+    .status-badge-live.turn-waiting {
+      background: rgba(100, 116, 139, 0.2);
+      color: #94a3b8;
+    }
+
+    .score-number {
+      font-size: 1.7rem;
+      font-weight: 800;
+      line-height: 1;
+      color: #fff;
+    }
+
+    .score-divider {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #64748b;
+    }
+
+    /* THANH TRẠNG THÁI CHÍNH */
+    .status-panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-surface);
+      padding: 9px 18px;
+      border-radius: 40px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      min-height: 48px;
+    }
+
+    .turn-text-banner {
+      font-size: 0.9rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-action {
+      background: var(--primary);
+      border: none;
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.75rem;
+      transition: all 0.15s;
+    }
+    .btn-action.secondary {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+    }
+    .btn-action:hover { opacity: 0.9; transform: scale(1.03); }
+    .btn-action:active { transform: scale(0.97); }
+
+    /* Board UI */
+    .board-container {
+      background: var(--bg-surface);
+      padding: 12px;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--border-color);
+      position: relative;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(15, minmax(0, 1fr));
+      gap: 3px;
+      background: #090d16;
+      padding: 4px;
+      border-radius: 10px;
+    }
+    .board.disabled { pointer-events: none; opacity: 0.85; }
+
+    .cell {
+      width: 36px;
+      height: 36px;
+      background: var(--bg-cell);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      font-weight: 800;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .cell:hover:not(.taken) {
+      background: var(--bg-cell-hover);
+      transform: scale(0.96);
+    }
+    .cell:hover:not(.taken)::after {
+      content: attr(data-preview);
+      opacity: 0.25;
+      font-weight: 800;
+    }
+    .cell[data-preview="X"]:hover::after { color: var(--color-x); }
+    .cell[data-preview="O"]:hover::after { color: var(--color-o); }
+
+    .cell.x {
+      color: var(--color-x);
+      text-shadow: 0 0 10px var(--glow-x);
+      animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .cell.o {
+      color: var(--color-o);
+      text-shadow: 0 0 10px var(--glow-o);
+      animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .cell.last-move::before {
+      content: '';
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      bottom: 3px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 0 6px #fff;
+    }
+
+    .cell.winner {
+      background: rgba(250, 204, 21, 0.18) !important;
+      border: 1.5px solid var(--win-color);
+      animation: winPulse 1.2s infinite alternate ease-in-out;
+      z-index: 2;
+    }
+
+    /* Animations */
+    @keyframes popIn {
+      0% { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes winPulse {
+      0% { box-shadow: 0 0 4px var(--win-glow); }
+      100% { box-shadow: 0 0 16px var(--win-glow); transform: scale(1.05); }
+    }
+    @keyframes pulseGreen {
+      0% { box-shadow: 0 0 0px rgba(16, 185, 129, 0.2); }
+      100% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+    }
+    @keyframes scoreBump {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.4); }
+      100% { transform: scale(1); }
+    }
+    .score-bump { animation: scoreBump 0.4s ease-out; }
+
+    @media (max-width: 650px) {
+      .cell { width: 22px; height: 22px; font-size: 0.8rem; border-radius: 3px; }
+      .board { gap: 2px; }
+      .board-container { padding: 6px; }
+      .title { font-size: 1.4rem; }
+      .scoreboard { max-width: 100%; }
+      .turn-text-banner { font-size: 0.78rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="game-header">
+    <h1 class="title">CARO PRO</h1>
+    
+    <div class="control-bar">
+      <select id="gameMode" class="select-pill" onchange="handleSettingsChange()">
+        <option value="pve">🤖 Chế độ với Máy (AI)</option>
+        <option value="pvp">👥 2 Người chơi (PvP)</option>
+      </select>
+
+      <select id="turnOption" class="select-pill" onchange="handleSettingsChange()">
+        <option value="user_first">🎯 Bạn đi trước</option>
+        <option value="ai_first">🤖 AI đi trước</option>
+        <option value="random" selected>🎲 Ngẫu nhiên (Tung đồng xu)</option>
+      </select>
+
+      <select id="difficulty" class="select-pill" onchange="resetRound()">
+        <option value="hard">🔥 Bậc Thầy</option>
+        <option value="medium">⚡ Tiêu Chuẩn</option>
+        <option value="easy">🌱 Tân Thủ</option>
+      </select>
+    </div>
+
+    <!-- BẢNG ĐIỂM VỚI ĐÈN TÍN HIỆU LƯỢT ĐÁNH -->
+    <div class="scoreboard">
+      <!-- Thẻ Bên Trái: BẠN -->
+      <div class="score-card" id="cardLeft">
+        <div class="player-info">
+          <div class="player-title-row">
+            <span class="player-avatar">👤</span>
+            <span class="player-name" id="nameLeft">BẠN</span>
+            <span class="piece-tag" id="badgeLeft">X</span>
+          </div>
+          <div class="status-badge-live turn-active" id="liveTagLeft">● ĐẾN LƯỢT</div>
+        </div>
+        <div class="score-number" id="scoreLeft">0</div>
+      </div>
+
+      <div class="score-divider">VS</div>
+
+      <!-- Thẻ Bên Phải: BOT AI -->
+      <div class="score-card" id="cardRight">
+        <div class="score-number" id="scoreRight">0</div>
+        <div class="player-info">
+          <div class="player-title-row">
+            <span class="piece-tag" id="badgeRight">O</span>
+            <span class="player-name" id="nameRight">BOT AI</span>
+            <span class="player-avatar">🤖</span>
+          </div>
+          <div class="status-badge-live turn-waiting" id="liveTagRight">CHỜ</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- THANH TRẠNG THÁI HIỂN THỊ RÕ RÀNG BẰNG CHỮ -->
+    <div class="status-panel">
+      <div class="turn-text-banner" id="turnDisplay">
+        👉 ĐẾN LƯỢT BẠN ĐÁNH!
+      </div>
+      <div class="btn-group">
+        <button class="btn-action secondary" onclick="resetScores()">Xóa Tỉ Số</button>
+        <button class="btn-action" onclick="resetRound()">Ván Mới</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="board-container">
+    <div class="board" id="board"></div>
+  </main>
+
+  <script>
+    const BOARD_SIZE = 15;
+    let boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
+    let currentPlayer = 'X';
+    let isGameOver = false;
+    let isAIThinking = false;
+    let lastMoveElement = null;
+
+    let humanPiece = 'X';
+    let aiPiece = 'O';
+
+    let matchScores = {
+      pve: { human: 0, ai: 0 },
+      pvp: { p1: 0, p2: 0 }
+    };
+    loadSavedScores();
+
+    // DOM Elements
+    const boardElement = document.getElementById('board');
+    const turnDisplay = document.getElementById('turnDisplay');
+    const gameModeSelect = document.getElementById('gameMode');
+    const turnOptionSelect = document.getElementById('turnOption');
+    const difficultySelect = document.getElementById('difficulty');
+
+    const cardLeft = document.getElementById('cardLeft');
+    const cardRight = document.getElementById('cardRight');
+    const nameLeft = document.getElementById('nameLeft');
+    const nameRight = document.getElementById('nameRight');
+    const badgeLeft = document.getElementById('badgeLeft');
+    const badgeRight = document.getElementById('badgeRight');
+    const liveTagLeft = document.getElementById('liveTagLeft');
+    const liveTagRight = document.getElementById('liveTagRight');
+    const scoreLeftElem = document.getElementById('scoreLeft');
+    const scoreRightElem = document.getElementById('scoreRight');
+
+    // 1. Quản lý Tỉ số & LocalStorage
+    function loadSavedScores() {
+      const saved = localStorage.getItem('caro_entity_scores_v3');
+      if (saved) {
+        try { matchScores = JSON.parse(saved); } catch (e) {}
+      }
+    }
+
+    function saveScores() {
+      localStorage.setItem('caro_entity_scores_v3', JSON.stringify(matchScores));
+    }
+
+    function updateScoreUI(animateWinnerSide = null) {
+      const isPvE = gameModeSelect.value === 'pve';
+      const scoreL = isPvE ? matchScores.pve.human : matchScores.pvp.p1;
+      const scoreR = isPvE ? matchScores.pve.ai : matchScores.pvp.p2;
+
+      scoreLeftElem.textContent = scoreL;
+      scoreRightElem.textContent = scoreR;
+
+      if (animateWinnerSide === 'left') {
+        scoreLeftElem.classList.remove('score-bump');
+        void scoreLeftElem.offsetWidth;
+        scoreLeftElem.classList.add('score-bump');
+      } else if (animateWinnerSide === 'right') {
+        scoreRightElem.classList.remove('score-bump');
+        void scoreRightElem.offsetWidth;
+        scoreRightElem.classList.add('score-bump');
+      }
+    }
+
+    function resetScores() {
+      const isPvE = gameModeSelect.value === 'pve';
+      if (isPvE) {
+        matchScores.pve.human = 0;
+        matchScores.pve.ai = 0;
+      } else {
+        matchScores.pvp.p1 = 0;
+        matchScores.pvp.p2 = 0;
+      }
+      saveScores();
+      updateScoreUI();
+      resetRound();
+    }
+
+    // 2. Thiết lập Lượt & Quân cờ
+    function determineTurnAssignment() {
+      const isPvE = gameModeSelect.value === 'pve';
+      const turnChoice = turnOptionSelect.value;
+      let isFirstEntityPlayingX = true;
+
+      if (turnChoice === 'user_first') isFirstEntityPlayingX = true;
+      else if (turnChoice === 'ai_first') isFirstEntityPlayingX = false;
+      else if (turnChoice === 'random') isFirstEntityPlayingX = Math.random() < 0.5;
+
+      if (isPvE) {
+        humanPiece = isFirstEntityPlayingX ? 'X' : 'O';
+        aiPiece = isFirstEntityPlayingX ? 'O' : 'X';
+
+        nameLeft.textContent = 'BẠN';
+        nameRight.textContent = 'BOT AI';
+      } else {
+        humanPiece = isFirstEntityPlayingX ? 'X' : 'O';
+        aiPiece = isFirstEntityPlayingX ? 'O' : 'X';
+
+        nameLeft.textContent = 'NGƯỜI CHƠI 1';
+        nameRight.textContent = 'NGƯỜI CHƠI 2';
+      }
+
+      badgeLeft.textContent = humanPiece;
+      badgeLeft.className = `piece-tag tag-${humanPiece.toLowerCase()}`;
+
+      badgeRight.textContent = aiPiece;
+      badgeRight.className = `piece-tag tag-${aiPiece.toLowerCase()}`;
+
+      return { isUserFirst: isFirstEntityPlayingX };
+    }
+
+    function handleSettingsChange() {
+      const isPvE = gameModeSelect.value === 'pve';
+      difficultySelect.style.display = isPvE ? 'inline-block' : 'none';
+      updateScoreUI();
+      resetRound();
+    }
+
+    // 3. Khởi tạo Bàn cờ
+    function initBoard() {
+      boardElement.innerHTML = '';
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          const cell = document.createElement('div');
+          cell.classList.add('cell');
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.dataset.preview = currentPlayer;
+          cell.addEventListener('click', () => handleCellClick(r, c, cell));
+          boardElement.appendChild(cell);
+        }
+      }
+      updateVisualTurnFeedback();
+      updateScoreUI();
+    }
+
+    function updatePreviews() {
+      document.querySelectorAll('.cell:not(.taken)').forEach(cell => {
+        cell.dataset.preview = currentPlayer;
+      });
+    }
+
+    // 4. CẬP NHẬT TRẠNG THÁI THỊ GIÁC SIÊU TRỰC QUAN
+    function updateVisualTurnFeedback() {
+      if (isGameOver) {
+        cardLeft.className = 'score-card';
+        cardRight.className = 'score-card';
+        liveTagLeft.className = 'status-badge-live turn-waiting';
+        liveTagLeft.textContent = 'KẾT THÚC';
+        liveTagRight.className = 'status-badge-live turn-waiting';
+        liveTagRight.textContent = 'KẾT THÚC';
+        return;
+      }
+
+      const isPvE = gameModeSelect.value === 'pve';
+      const isMyTurn = (currentPlayer === humanPiece);
+
+      // Cập nhật viền thẻ & Huy hiệu đèn
+      if (isMyTurn) {
+        cardLeft.className = `score-card active-turn ${humanPiece === 'O' ? 'is-o' : ''}`;
+        cardRight.className = 'score-card';
+        liveTagLeft.className = 'status-badge-live turn-active';
+        liveTagLeft.textContent = '● ĐẾN LƯỢT';
+        liveTagRight.className = 'status-badge-live turn-waiting';
+        liveTagRight.textContent = 'CHỜ ĐỐI THỦ';
+
+        if (isPvE) {
+          turnDisplay.innerHTML = `<span style="color: #38bdf8;">👉 ĐẾN LƯỢT BẠN ĐÁNH! (Quân ${humanPiece})</span>`;
+        } else {
+          turnDisplay.innerHTML = `<span style="color: #38bdf8;">👉 LƯỢT NGƯỜI CHƠI 1 (Quân ${humanPiece})</span>`;
+        }
+      } else {
+        cardRight.className = `score-card active-turn ${aiPiece === 'O' ? 'is-o' : ''}`;
+        cardLeft.className = 'score-card';
+        liveTagRight.className = 'status-badge-live turn-active';
+        liveTagRight.textContent = '● ĐẾN LƯỢT';
+        liveTagLeft.className = 'status-badge-live turn-waiting';
+        liveTagLeft.textContent = 'CHỜ ĐỐI THỦ';
+
+        if (isPvE) {
+          turnDisplay.innerHTML = `<span style="color: #f43f5e;">🤖 BOT AI ĐANG SUY NGHĨ... (Quân ${aiPiece})</span>`;
+        } else {
+          turnDisplay.innerHTML = `<span style="color: #f43f5e;">👉 LƯỢT NGƯỜI CHƠI 2 (Quân ${aiPiece})</span>`;
+        }
+      }
+
+      updatePreviews();
+    }
+
+    // 5. Xử lý Nước đi
+    function makeMove(row, col) {
+      const cellElement = boardElement.children[row * BOARD_SIZE + col];
+      boardState[row][col] = currentPlayer;
+      cellElement.textContent = currentPlayer;
+      cellElement.classList.add('taken', currentPlayer.toLowerCase());
+
+      if (lastMoveElement) lastMoveElement.classList.remove('last-move');
+      cellElement.classList.add('last-move');
+      lastMoveElement = cellElement;
+
+      const winningCombo = checkWin(row, col, currentPlayer);
+      if (winningCombo) {
+        endGame(winningCombo);
+        return true;
+      }
+      return false;
+    }
+
+    function handleCellClick(row, col, cellElement) {
+      if (isGameOver || isAIThinking || boardState[row][col] !== null) return;
+      if (gameModeSelect.value === 'pve' && currentPlayer !== humanPiece) return;
+
+      const won = makeMove(row, col);
+      if (won) return;
+
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      updateVisualTurnFeedback();
+
+      if (gameModeSelect.value === 'pve' && currentPlayer === aiPiece && !isGameOver) {
+        triggerAIMove();
+      }
+    }
+
+    // 6. AI Engine
+    function triggerAIMove() {
+      isAIThinking = true;
+      boardElement.classList.add('disabled');
+
+      setTimeout(() => {
+        const bestMove = getBestAIMove();
+        if (bestMove) {
+          const won = makeMove(bestMove.r, bestMove.c);
+          if (!won) {
+            currentPlayer = humanPiece;
+            updateVisualTurnFeedback();
+          }
+        }
+        isAIThinking = false;
+        boardElement.classList.remove('disabled');
+      }, 400);
+    }
+
+    function getBestAIMove() {
+      const diff = difficultySelect.value;
+      const candidates = getCandidateMoves();
+      if (candidates.length === 0) return { r: 7, c: 7 };
+
+      if (diff === 'easy' && Math.random() < 0.35) {
+        return candidates[Math.floor(Math.random() * candidates.length)];
+      }
+
+      let bestScore = -Infinity;
+      let bestMove = candidates[0];
+      const defenseWeight = diff === 'hard' ? 1.15 : (diff === 'medium' ? 0.85 : 0.5);
+
+      for (let move of candidates) {
+        const attackScore = evaluatePoint(move.r, move.c, aiPiece);
+        const defenseScore = evaluatePoint(move.r, move.c, humanPiece);
+        let totalScore = attackScore + (defenseScore * defenseWeight) + Math.random() * 4;
+
+        if (totalScore > bestScore) {
+          bestScore = totalScore;
+          bestMove = move;
+        }
+      }
+      return bestMove;
+    }
+
+    function getCandidateMoves() {
+      const candidates = [];
+      const visited = Array(BOARD_SIZE).fill(false).map(() => Array(BOARD_SIZE).fill(false));
+      let hasStone = false;
+
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          if (boardState[r][c] !== null) {
+            hasStone = true;
+            for (let dr = -2; dr <= 2; dr++) {
+              for (let dc = -2; dc <= 2; dc++) {
+                const nr = r + dr, nc = c + dc;
+                if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
+                  if (boardState[nr][nc] === null && !visited[nr][nc]) {
+                    visited[nr][nc] = true;
+                    candidates.push({ r: nr, c: nc });
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      return hasStone ? candidates : [];
+    }
+
+    function evaluatePoint(r, c, player) {
+      let score = 0;
+      const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+
+      for (let [dr, dc] of directions) {
+        let count = 1;
+        let openEnds = 0;
+
+        let i = 1;
+        while (true) {
+          const nr = r + dr * i, nc = c + dc * i;
+          if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) break;
+          if (boardState[nr][nc] === player) count++;
+          else if (boardState[nr][nc] === null) { openEnds++; break; }
+          else break;
+          i++;
+        }
+
+        i = 1;
+        while (true) {
+          const nr = r - dr * i, nc = c - dc * i;
+          if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) break;
+          if (boardState[nr][nc] === player) count++;
+          else if (boardState[nr][nc] === null) { openEnds++; break; }
+          else break;
+          i++;
+        }
+
+        if (count >= 5) score += 100000;
+        else if (count === 4) score += openEnds === 2 ? 10000 : 1500;
+        else if (count === 3) score += openEnds === 2 ? 3000 : 300;
+        else if (count === 2) score += openEnds === 2 ? 200 : 30;
+      }
+      return score;
+    }
+
+    // 7. Kiểm tra Thắng
+    function checkWin(r, c, player) {
+      const directions = [
+        [[0, 1], [0, -1]], [[1, 0], [-1, 0]],
+        [[1, 1], [-1, -1]], [[1, -1], [-1, 1]]
+      ];
+
+      for (let dir of directions) {
+        let winningCells = [{ r, c }];
+        for (let [dr, dc] of dir) {
+          let currR = r + dr, currC = c + dc;
+          while (
+            currR >= 0 && currR < BOARD_SIZE &&
+            currC >= 0 && currC < BOARD_SIZE &&
+            boardState[currR][currC] === player
+          ) {
+            winningCells.push({ r: currR, c: currC });
+            currR += dr;
+            currC += dc;
+          }
+        }
+        if (winningCells.length >= 5) return winningCells;
+      }
+      return null;
+    }
+
+    // 8. Kết thúc trận đấu
+    function endGame(winningCombo) {
+      isGameOver = true;
+      updateVisualTurnFeedback();
+
+      const isPvE = gameModeSelect.value === 'pve';
+      const isLeftWinner = (currentPlayer === humanPiece);
+
+      if (isPvE) {
+        if (isLeftWinner) matchScores.pve.human++;
+        else matchScores.pve.ai++;
+      } else {
+        if (isLeftWinner) matchScores.pvp.p1++;
+        else matchScores.pvp.p2++;
+      }
+
+      saveScores();
+      updateScoreUI(isLeftWinner ? 'left' : 'right');
+
+      let winnerText = '';
+      if (isPvE) {
+        winnerText = isLeftWinner ? '🏆 BẠN ĐÃ CHIẾN THẮNG!' : '🤖 BOT AI ĐÃ THẮNG!';
+      } else {
+        winnerText = `🎉 ${isLeftWinner ? nameLeft.textContent : nameRight.textContent} THẮNG!`;
+      }
+
+      turnDisplay.innerHTML = `<span style="color: var(--win-color); font-weight: 800;">${winnerText}</span>`;
+
+      winningCombo.forEach(({ r, c }) => {
+        boardElement.children[r * BOARD_SIZE + c].classList.add('winner');
+      });
+    }
+
+    // 9. Ván Mới với Banner Mở Màn
+    function resetRound() {
+      boardState = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
+      currentPlayer = 'X';
+      isGameOver = false;
+      isAIThinking = false;
+      lastMoveElement = null;
+      boardElement.classList.remove('disabled');
+
+      const { isUserFirst } = determineTurnAssignment();
+      initBoard();
+
+      // Nếu AI đi trước (AI cầm quân X)
+      if (gameModeSelect.value === 'pve' && aiPiece === 'X') {
+        triggerAIMove();
+      }
+    }
+
+    // Khởi chạy
+    handleSettingsChange();
+  </script>
+</body>
+</html>
