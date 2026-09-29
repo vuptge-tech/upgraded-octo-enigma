@@ -1,943 +1,787 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minesweeper AI Solver & Neural Memory Cache (6x8 - 11 Bom)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-color: #080c14;
-            --panel-bg: rgba(26, 34, 52, 0.75);
-            --panel-border: rgba(255, 255, 255, 0.08);
-            --cell-empty: #1e293b;
-            --cell-hover: #334155;
-            --cell-clue: #0f172a;
-            
-            --accent-cyan: #38bdf8;
-            --accent-emerald: #10b981;
-            --accent-rose: #f43f5e;
-            --accent-amber: #f59e0b;
-            --accent-purple: #a855f7;
-            --accent-indigo: #6366f1;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minesweeper Diagnostic Pro - Tuỳ Chỉnh Ô & Bom</title>
+  <style>
+    :root {
+      --bg: #181926;
+      --panel-bg: #24273a;
+      --card-bg: #1e2030;
+      --border: #363a4f;
+      --text: #cad3f5;
+      --text-muted: #a5adcb;
+      --safe: #a6da95;
+      --safe-bg: rgba(166, 218, 149, 0.25);
+      --mine: #ed8796;
+      --mine-bg: rgba(237, 135, 150, 0.25);
+      --accent: #c6a0f6;
+      --warning: #eed49f;
+      --cell-unopened: #363a4f;
+      --cell-revealed: #494d64;
+    }
 
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --cell-size: 52px;
-        }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
-        }
+    header { text-align: center; margin-bottom: 16px; }
+    h1 { font-size: 24px; color: #fff; margin-bottom: 4px; }
+    header p { font-size: 13px; color: var(--text-muted); }
 
-        body {
-            background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(at 5% 5%, rgba(99, 102, 241, 0.18) 0px, transparent 50%),
-                radial-gradient(at 95% 95%, rgba(56, 189, 248, 0.15) 0px, transparent 50%);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 24px 16px;
-        }
+    .main-layout {
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      max-width: 1280px;
+      width: 100%;
+      align-items: flex-start;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
 
-        .main-layout {
-            display: grid;
-            grid-template-columns: auto 340px;
-            gap: 20px;
-            max-width: 960px;
-            width: 100%;
-        }
+    /* Bảng điều khiển */
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 360px;
+    }
 
-        /* Left Side: Game Board */
-        .game-section {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            align-items: center;
-        }
+    .card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
 
-        .header {
-            text-align: center;
-        }
+    .card-title {
+      font-size: 13px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-        .title {
-            font-size: 1.6rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -0.5px;
-        }
+    /* Form tuỳ chọn kích cỡ và bom */
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .config-item { display: flex; flex-direction: column; gap: 4px; }
+    .config-item label { font-size: 11px; color: var(--text-muted); }
+    .config-item input {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: #fff;
+      padding: 6px 8px;
+      font-size: 13px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .config-item input:focus { border-color: var(--accent); outline: none; }
 
-        .subtitle {
-            font-size: 0.82rem;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
+    select.preset-select {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 4px;
+      background: var(--card-bg);
+      color: #fff;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
 
-        .lab-card {
-            background: var(--panel-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--panel-border);
-            border-radius: 24px;
-            padding: 18px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 14px;
-        }
+    /* Cọ vẽ */
+    .palette-group { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; }
+    .palette-btn {
+      padding: 5px 10px;
+      background: var(--cell-unopened);
+      color: #fff;
+      border: 2px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+    .palette-btn:hover { background: var(--cell-revealed); }
+    .palette-btn.active { border-color: var(--accent); background: #5b6078; }
 
-        /* Status Header */
-        .info-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 8px 14px;
-            border-radius: 12px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-        }
+    /* Nút hành động */
+    .action-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button.btn {
+      padding: 9px 12px;
+      border-radius: 6px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 13px;
+      transition: 0.15s;
+    }
+    .btn-apply-size { background: #5b6078; color: #fff; width: 100%; margin-bottom: 6px; }
+    .btn-diagnose { background: var(--safe); color: #181926; flex: 2; }
+    .btn-auto { background: var(--accent); color: #181926; flex: 2; }
+    .btn-reset { background: var(--cell-revealed); color: #fff; flex: 1; }
+    button.btn:hover { opacity: 0.9; }
 
-        .target-tag {
-            color: var(--accent-rose);
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
+    /* Dashboard chỉ số */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .stat-item {
+      background: var(--card-bg);
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .stat-label { font-size: 10px; color: var(--text-muted); margin-bottom: 2px; }
+    .stat-val { font-size: 16px; font-weight: bold; color: #fff; }
 
-        .cache-status-tag {
-            padding: 2px 8px;
-            border-radius: 6px;
-            font-size: 0.72rem;
-            font-weight: 700;
-            background: rgba(56, 189, 248, 0.1);
-            color: var(--accent-cyan);
-            border: 1px solid rgba(56, 189, 248, 0.2);
-            transition: all 0.3s ease;
-        }
+    /* Bàn cờ */
+    .board-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--panel-bg);
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      max-width: 100%;
+      overflow-x: auto;
+    }
 
-        .cache-status-tag.hit {
-            background: rgba(16, 185, 129, 0.18);
-            color: var(--accent-emerald);
-            border-color: var(--accent-emerald);
-        }
+    .grid { display: grid; gap: 3px; }
 
-        /* Tool Palette */
-        .palette {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 6px;
-            width: 100%;
-        }
+    .cell {
+      background: var(--cell-unopened);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    .cell:hover { filter: brightness(1.2); }
+    .cell.revealed { background: var(--cell-revealed); cursor: default; }
+    .cell.revealed-0 { background: #282a36; color: transparent; }
 
-        .tool-btn {
-            background: #1e293b;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            height: 40px;
-            color: var(--text-main);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.15rem;
-            font-weight: 800;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.15s ease;
-        }
+    /* Màu số */
+    .num-1 { color: #8aadf4; }
+    .num-2 { color: #a6da95; }
+    .num-3 { color: #ed8796; }
+    .num-4 { color: #c6a0f6; }
+    .num-5 { color: #f5a97f; }
+    .num-6 { color: #8bd5ca; }
+    .num-7 { color: #ee99a0; }
+    .num-8 { color: #ffffff; }
 
-        .tool-btn:hover {
-            background: #334155;
-            transform: translateY(-2px);
-        }
+    /* Trạng thái chẩn đoán */
+    .cell.safe { background: var(--safe-bg) !important; border: 2px solid var(--safe); color: var(--safe); }
+    .cell.mine { background: var(--mine-bg) !important; border: 2px solid var(--mine); color: var(--mine); }
+    .cell.prob { font-size: 11px; font-weight: bold; }
+    .cell.best-guess { border: 2px dashed var(--accent) !important; box-shadow: 0 0 8px var(--accent); }
+    .cell.deep-safe { border: 2px dashed var(--safe) !important; box-shadow: 0 0 8px var(--safe); }
 
-        .tool-btn.active {
-            border-color: var(--accent-cyan);
-            background: rgba(56, 189, 248, 0.2);
-            box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
-            transform: scale(1.04);
-        }
-
-        /* Board */
-        .board-container {
-            padding: 6px;
-            border-radius: 16px;
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.04);
-        }
-
-        .board {
-            display: grid;
-            grid-template-columns: repeat(8, var(--cell-size));
-            grid-template-rows: repeat(6, var(--cell-size));
-            gap: 6px;
-        }
-
-        .cell {
-            width: var(--cell-size);
-            height: var(--cell-size);
-            background: var(--cell-empty);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            font-weight: 800;
-            font-size: 1.25rem;
-            cursor: pointer;
-            position: relative;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
-            transition: all 0.15s ease;
-        }
-
-        .cell:hover {
-            transform: scale(1.05);
-            border-color: rgba(255, 255, 255, 0.25);
-            z-index: 2;
-        }
-
-        .cell.clue {
-            background: var(--cell-clue);
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
-        }
-
-        .cell.fixed-bomb {
-            background: rgba(244, 63, 94, 0.2);
-            border-color: var(--accent-rose);
-            color: var(--accent-rose);
-        }
-
-        /* AI Results */
-        .cell.ai-safe {
-            background: rgba(16, 185, 129, 0.2) !important;
-            border: 2px solid var(--accent-emerald) !important;
-            box-shadow: 0 0 12px rgba(16, 185, 129, 0.4) !important;
-        }
-
-        .cell.ai-bomb {
-            background: rgba(244, 63, 94, 0.25) !important;
-            border: 2px solid var(--accent-rose) !important;
-            box-shadow: 0 0 12px rgba(244, 63, 94, 0.5) !important;
-        }
-
-        .cell.ai-conflict {
-            background: rgba(239, 68, 68, 0.35) !important;
-            border: 2px dashed #ef4444 !important;
-        }
-
-        .safe-tag { font-size: 0.65rem; font-weight: 800; color: var(--accent-emerald); }
-        .bomb-tag { font-size: 0.65rem; font-weight: 800; color: var(--accent-rose); }
-        .prob-subtext { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700; color: var(--accent-amber); position: absolute; bottom: 3px; }
-
-        /* Number Colors */
-        .c-0 { color: #64748b; font-size: 0.9rem; }
-        .c-1 { color: #38bdf8; }
-        .c-2 { color: #34d399; }
-        .c-3 { color: #f87171; }
-        .c-4 { color: #c084fc; }
-        .c-5 { color: #fbbf24; }
-
-        /* Action Buttons */
-        .actions-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            width: 100%;
-        }
-
-        .btn-act {
-            padding: 10px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            font-weight: 700;
-            font-size: 0.8rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            transition: all 0.2s ease;
-        }
-
-        .btn-solve {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: #fff;
-            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
-        }
-        .btn-solve:hover {
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
-            transform: translateY(-1px);
-        }
-        .btn-secondary { background: #1e293b; color: var(--text-main); }
-        .btn-secondary:hover { background: #334155; }
-
-        .ai-log-box {
-            width: 100%;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 14px;
-            padding: 10px 14px;
-            font-size: 0.82rem;
-            line-height: 1.4;
-            color: var(--text-muted);
-            min-height: 48px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .ai-log-icon { font-size: 1.3rem; }
-
-        /* Right Side: History & Memory Panel */
-        .history-card {
-            background: var(--panel-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--panel-border);
-            border-radius: 24px;
-            padding: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            height: calc(100% - 10px);
-            min-height: 480px;
-        }
-
-        .history-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .history-title {
-            font-size: 1rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-clear-history {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            font-size: 0.75rem;
-            cursor: pointer;
-            padding: 4px 6px;
-            border-radius: 6px;
-        }
-        .btn-clear-history:hover { color: var(--accent-rose); background: rgba(244, 63, 94, 0.1); }
-
-        .history-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            overflow-y: auto;
-            max-height: 460px;
-            padding-right: 4px;
-        }
-
-        .history-list::-webkit-scrollbar { width: 4px; }
-        .history-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-
-        .history-item {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .history-item:hover {
-            border-color: var(--accent-indigo);
-            background: rgba(30, 41, 59, 0.8);
-            transform: translateX(2px);
-        }
-
-        .history-item-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.75rem;
-        }
-
-        .history-time { color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
-        .history-stats {
-            display: flex;
-            gap: 8px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-        }
-
-        .badge-safe { color: var(--accent-emerald); }
-        .badge-bomb { color: var(--accent-rose); }
-        .badge-speed { color: var(--accent-cyan); font-weight: 700; }
-
-        .empty-history {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 0.82rem;
-            padding: 30px 10px;
-        }
-
-        @media (max-width: 860px) {
-            .main-layout {
-                grid-template-columns: 1fr;
-            }
-            :root { --cell-size: 42px; }
-        }
-    </style>
+    /* Chú giải */
+    .legend {
+      display: flex;
+      gap: 12px;
+      margin-top: 14px;
+      font-size: 11px;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-box { width: 10px; height: 10px; border-radius: 2px; }
+  </style>
 </head>
 <body>
 
-    <div class="main-layout">
-        <!-- LEFT: Bàn cờ và Bảng điều khiển -->
-        <section class="game-section">
-            <header class="header">
-                <h1 class="title">⚡ AI SOLVER & NEURAL CACHE</h1>
-                <p class="subtitle">Lưới 6 × 8 • 11 Bom • Bộ nhớ đệm O(1) tăng tốc tức thì</p>
-            </header>
+  <header>
+    <h1>🧠 Minesweeper AI Diagnostic Pro</h1>
+    <p>Chẩn đoán thế cờ thông minh | Tính xác suất biên & vùng xa dựa trên tổng số bom</p>
+  </header>
 
-            <main class="lab-card">
-                <!-- Info Status -->
-                <div class="info-bar">
-                    <div class="target-tag">
-                        <span>💣 Mục tiêu:</span>
-                        <span>11 Bom</span>
-                    </div>
-                    <div class="cache-status-tag" id="cache-badge">⚡ Sẵn sàng</div>
-                </div>
+  <div class="main-layout">
+    <!-- CỘT TRÁI -->
+    <div class="left-panel">
+      <!-- Cấu hình bàn cờ & Bom -->
+      <div class="card">
+        <div class="card-title">⚙️ Kích thước & Số bom</div>
+        
+        <select class="preset-select" id="levelSelector" onchange="applyPresetLevel(this.value)">
+          <option value="custom">-- Chọn chế độ tiêu chuẩn hoặc tự nhập --</option>
+          <option value="9x9x10">Mới chơi (Beginner): 9x9 - 10 Bom</option>
+          <option value="16x16x40">Trung cấp (Intermediate): 16x16 - 40 Bom</option>
+          <option value="16x30x99">Chuyên gia (Expert): 16x30 - 99 Bom</option>
+          <option value="6x6x5" selected>Thử nghiệm nhỏ: 6x6 - 5 Bom</option>
+        </select>
 
-                <!-- Palette Toolbar -->
-                <div class="palette">
-                    <button class="tool-btn active" data-tool="1" style="color: #38bdf8;">1</button>
-                    <button class="tool-btn" data-tool="2" style="color: #34d399;">2</button>
-                    <button class="tool-btn" data-tool="3" style="color: #f87171;">3</button>
-                    <button class="tool-btn" data-tool="4" style="color: #c084fc;">4</button>
-                    <button class="tool-btn" data-tool="5" style="color: #fbbf24;">5</button>
-                    <button class="tool-btn" data-tool="0" style="color: #94a3b8;">0</button>
-                    <button class="tool-btn" data-tool="B" style="color: var(--accent-rose);" title="Đặt cờ/bom">💣</button>
-                    <button class="tool-btn" data-tool="EMPTY" style="color: #cbd5e1;" title="Xóa ô">✕</button>
-                </div>
+        <div class="config-grid">
+          <div class="config-item">
+            <label>Số Hàng</label>
+            <input type="number" id="inputRows" min="3" max="30" value="6">
+          </div>
+          <div class="config-item">
+            <label>Số Cột</label>
+            <input type="number" id="inputCols" min="3" max="40" value="6">
+          </div>
+          <div class="config-item">
+            <label>Tổng Bom</label>
+            <input type="number" id="inputMines" min="1" max="500" value="5">
+          </div>
+        </div>
 
-                <!-- Board Container -->
-                <div class="board-container">
-                    <div id="board" class="board"></div>
-                </div>
+        <button class="btn btn-apply-size" onclick="applyCustomConfig()">Cập nhật Bàn cờ</button>
+      </div>
 
-                <!-- Action Controls -->
-                <div class="actions-grid">
-                    <button id="btn-run" class="btn-act btn-solve">
-                        <span>✨</span> Chẩn Đoán AI
-                    </button>
-                    <button id="btn-example" class="btn-act btn-secondary">
-                        <span>📑</span> Nạp Đề Mẫu
-                    </button>
-                    <button id="btn-clear" class="btn-act btn-secondary">
-                        <span>🗑️</span> Xóa Trắng
-                    </button>
-                </div>
+      <!-- Công cụ nhập liệu -->
+      <div class="card">
+        <div class="card-title">🛠️ Công cụ vẽ bàn cờ</div>
+        <div class="palette-group">
+          <button class="palette-btn active" data-val="UNOPENED" onclick="selectPalette('UNOPENED', this)">⬛</button>
+          <button class="palette-btn" data-val="FLAG" onclick="selectPalette('FLAG', this)">🚩</button>
+          <button class="palette-btn" data-val="0" onclick="selectPalette(0, this)">0</button>
+          <button class="palette-btn" data-val="1" onclick="selectPalette(1, this)">1</button>
+          <button class="palette-btn" data-val="2" onclick="selectPalette(2, this)">2</button>
+          <button class="palette-btn" data-val="3" onclick="selectPalette(3, this)">3</button>
+          <button class="palette-btn" data-val="4" onclick="selectPalette(4, this)">4</button>
+        </div>
 
-                <!-- Smart Diagnostic Log -->
-                <div id="ai-log" class="ai-log-box">
-                    <span class="ai-log-icon">💡</span>
-                    <span class="ai-log-text" id="log-content">Điền số vào ô. Nếu đã từng giải qua, AI sẽ nhận diện ngay trong <b>0.00 ms</b>.</span>
-                </div>
-            </main>
-        </section>
+        <div class="action-row">
+          <button class="btn btn-diagnose" onclick="runDiagnosis()">⚡ Chẩn Đoán</button>
+          <button class="btn btn-auto" onclick="autoApplyMove()">✨ Tự điền</button>
+          <button class="btn btn-reset" onclick="initBoard()">Xoá</button>
+        </div>
+      </div>
 
-        <!-- RIGHT: Lịch sử & Bộ nhớ Cache -->
-        <aside class="history-card">
-            <div class="history-header">
-                <div class="history-title">
-                    <span>🧠</span> Bộ Nhớ Thế Cờ
-                </div>
-                <button id="btn-clear-cache" class="btn-clear-history" title="Xóa toàn bộ lịch sử đã lưu">Xóa Bộ Nhớ</button>
-            </div>
-            
-            <div id="history-container" class="history-list">
-                <!-- Danh sách lịch sử sẽ tự động render tại đây -->
-            </div>
-        </aside>
+      <!-- Dashboard Chỉ số -->
+      <div class="card">
+        <div class="card-title">📊 Thống kê & Xác suất</div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-label">BOM CÒN LẠI</div>
+            <div id="stat-rem-mines" class="stat-val" style="color: var(--mine);">5</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Ô AN TOÀN 100%</div>
+            <div id="stat-safe" class="stat-val" style="color: var(--safe);">0</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">XÁC SUẤT VÙNG XA</div>
+            <div id="stat-deep-prob" class="stat-val" style="color: var(--warning);">-</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">GỢI Ý TỐT NHẤT</div>
+            <div id="stat-recommendation" class="stat-val" style="font-size: 13px; color: var(--accent);">Chờ phân tích</div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <script>
-        const ROWS = 6;
-        const COLS = 8;
-        const TOTAL_MINES = 11;
-        const STORAGE_KEY = 'minesweeper_solver_cache_v2';
+    <!-- CỘT PHẢI: BÀN CỜ -->
+    <div class="board-wrapper">
+      <div id="board" class="grid"></div>
 
-        let activeTool = '1';
-        let grid = [];
-        let memoryCache = {}; // In-memory hash table
+      <div class="legend">
+        <div class="legend-item"><div class="legend-box" style="background: var(--safe);"></div> An toàn 100%</div>
+        <div class="legend-item"><div class="legend-box" style="background: var(--mine);"></div> Chắc chắn có mìn</div>
+        <div class="legend-item"><div class="legend-box" style="border: 2px dashed var(--accent);"></div> Nước đoán tối ưu ở biên</div>
+        <div class="legend-item"><div class="legend-box" style="border: 2px dashed var(--safe);"></div> Nên bấm ngẫu nhiên ô xa</div>
+      </div>
+    </div>
+  </div>
 
-        const boardEl = document.getElementById('board');
-        const logContent = document.getElementById('log-content');
-        const cacheBadge = document.getElementById('cache-badge');
-        const historyContainer = document.getElementById('history-container');
-        const toolBtns = document.querySelectorAll('.tool-btn');
+  <script>
+    let ROWS = 6;
+    let COLS = 6;
+    let TOTAL_MINES = 5;
 
-        // Load Cache from LocalStorage
-        function loadMemoryFromStorage() {
-            try {
-                const stored = localStorage.getItem(STORAGE_KEY);
-                if (stored) {
-                    memoryCache = JSON.parse(stored);
-                }
-            } catch (e) {
-                memoryCache = {};
+    let currentPalette = 'UNOPENED';
+    let hoveredCell = null;
+    let boardData = [];
+
+    let lastAnalysis = {
+      safeKeys: new Set(),
+      mineKeys: new Set(),
+      probabilities: {},
+      bestKey: null,
+      recommendDeep: false
+    };
+
+    function applyPresetLevel(val) {
+      if (val === 'custom') return;
+      const [r, c, m] = val.split('x').map(Number);
+      document.getElementById('inputRows').value = r;
+      document.getElementById('inputCols').value = c;
+      document.getElementById('inputMines').value = m;
+      applyCustomConfig();
+    }
+
+    function applyCustomConfig() {
+      ROWS = parseInt(document.getElementById('inputRows').value) || 9;
+      COLS = parseInt(document.getElementById('inputCols').value) || 9;
+      TOTAL_MINES = parseInt(document.getElementById('inputMines').value) || 10;
+
+      // Giới hạn hợp lý
+      ROWS = Math.max(3, Math.min(30, ROWS));
+      COLS = Math.max(3, Math.min(40, COLS));
+      TOTAL_MINES = Math.max(1, Math.min(ROWS * COLS - 1, TOTAL_MINES));
+
+      initBoard();
+    }
+
+    function selectPalette(val, btn) {
+      currentPalette = val;
+      document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+    }
+
+    function initBoard() {
+      resetAnalysis();
+      const boardEl = document.getElementById('board');
+
+      // Tự động thu nhỏ kích thước ô nếu bàn cờ quá lớn
+      let cellSize = 42;
+      if (COLS > 20 || ROWS > 14) cellSize = 28;
+      else if (COLS > 12) cellSize = 34;
+
+      boardEl.style.gridTemplateColumns = `repeat(${COLS}, ${cellSize}px)`;
+      boardEl.innerHTML = '';
+
+      boardData = [];
+      for (let r = 0; r < ROWS; r++) {
+        const row = [];
+        for (let c = 0; c < COLS; c++) {
+          row.push({ state: 'UNOPENED', value: null });
+        }
+        boardData.push(row);
+      }
+
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.style.width = `${cellSize}px`;
+          cell.style.height = `${cellSize}px`;
+          cell.style.fontSize = cellSize < 32 ? '12px' : '15px';
+          cell.dataset.r = r;
+          cell.dataset.c = c;
+
+          cell.addEventListener('click', () => applyBrush(r, c, currentPalette));
+          cell.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const cur = boardData[r][c];
+            applyBrush(r, c, cur.state === 'FLAG' ? 'UNOPENED' : 'FLAG');
+          });
+
+          cell.addEventListener('mouseenter', () => hoveredCell = { r, c });
+          cell.addEventListener('mouseleave', () => hoveredCell = null);
+
+          boardEl.appendChild(cell);
+        }
+      }
+
+      renderBoard();
+      updateRemainingMinesUI();
+    }
+
+    function applyBrush(r, c, tool) {
+      resetAnalysis();
+      if (tool === 'UNOPENED') boardData[r][c] = { state: 'UNOPENED', value: null };
+      else if (tool === 'FLAG') boardData[r][c] = { state: 'FLAG', value: null };
+      else boardData[r][c] = { state: 'REVEALED', value: Number(tool) };
+      renderBoard();
+      updateRemainingMinesUI();
+    }
+
+    function updateRemainingMinesUI() {
+      let flagCount = 0;
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (boardData[r][c].state === 'FLAG') flagCount++;
+        }
+      }
+      document.getElementById('stat-rem-mines').innerText = TOTAL_MINES - flagCount;
+    }
+
+    function renderBoard() {
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const cellEl = document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`);
+          const data = boardData[r][c];
+
+          cellEl.className = 'cell';
+          cellEl.innerText = '';
+          cellEl.style.backgroundColor = '';
+
+          if (data.state === 'FLAG') {
+            cellEl.innerText = '🚩';
+          } else if (data.state === 'REVEALED') {
+            cellEl.classList.add('revealed', `num-${data.value}`);
+            if (data.value === 0) cellEl.classList.add('revealed-0');
+            else cellEl.innerText = data.value;
+          }
+        }
+      }
+    }
+
+    function getNeighbors(r, c) {
+      const res = [];
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+            res.push({ r: nr, c: nc, key: `${nr},${nc}` });
+          }
+        }
+      }
+      return res;
+    }
+
+    // ============================================================
+    // BỘ NÃO PHÂN TÍCH KẾT HỢP BIÊN & VÙNG XA
+    // ============================================================
+    function runDiagnosis() {
+      renderBoard();
+      updateRemainingMinesUI();
+
+      const safeCells = new Set();
+      const mineCells = new Set();
+      let constraints = [];
+      let totalFlags = 0;
+      const allUnopenedKeys = new Set();
+
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const state = boardData[r][c].state;
+          if (state === 'FLAG') totalFlags++;
+          else if (state === 'UNOPENED') allUnopenedKeys.add(`${r},${c}`);
+
+          if (state === 'REVEALED' && boardData[r][c].value > 0) {
+            const neighbors = getNeighbors(r, c);
+            const unopened = [];
+            let flags = 0;
+
+            for (const n of neighbors) {
+              const nState = boardData[n.r][n.c].state;
+              if (nState === 'FLAG') flags++;
+              else if (nState === 'UNOPENED') unopened.push(n.key);
             }
-            renderHistoryList();
+
+            const remMines = boardData[r][c].value - flags;
+            if (unopened.length > 0) {
+              constraints.push({ cells: new Set(unopened), mines: remMines });
+            }
+          }
+        }
+      }
+
+      // 1. Suy luận chắc chắn 100% (Subset reduction)
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const c of constraints) {
+          if (c.mines === 0 && c.cells.size > 0) {
+            for (const k of c.cells) if (!safeCells.has(k)) { safeCells.add(k); changed = true; }
+          } else if (c.mines === c.cells.size && c.cells.size > 0) {
+            for (const k of c.cells) if (!mineCells.has(k)) { mineCells.add(k); changed = true; }
+          }
+        }
+        for (const c of constraints) {
+          for (const s of safeCells) if (c.cells.has(s)) { c.cells.delete(s); changed = true; }
+          for (const m of mineCells) if (c.cells.has(m)) { c.cells.delete(m); c.mines -= 1; changed = true; }
+        }
+        // A ⊂ B
+        for (let i = 0; i < constraints.length; i++) {
+          for (let j = 0; j < constraints.length; j++) {
+            if (i === j) continue;
+            const A = constraints[i], B = constraints[j];
+            if (A.cells.size > 0 && isSubset(A.cells, B.cells)) {
+              const diffCells = setDifference(B.cells, A.cells);
+              const diffMines = B.mines - A.mines;
+              if (diffMines === 0) {
+                for (const k of diffCells) if (!safeCells.has(k)) { safeCells.add(k); changed = true; }
+              } else if (diffMines === diffCells.size) {
+                for (const k of diffCells) if (!mineCells.has(k)) { mineCells.add(k); changed = true; }
+              }
+            }
+          }
+        }
+      }
+
+      lastAnalysis.safeKeys = safeCells;
+      lastAnalysis.mineKeys = mineCells;
+
+      if (safeCells.size > 0 || mineCells.size > 0) {
+        renderCertainCells(safeCells, mineCells);
+        document.getElementById('stat-safe').innerText = safeCells.size;
+        document.getElementById('stat-recommendation').innerText = `Mở ${safeCells.size} ô an toàn!`;
+        return;
+      }
+
+      // 2. Nếu không có ô 100%, chạy Tank Solver tính % biên
+      const activeConstraints = constraints.filter(c => c.cells.size > 0);
+      const frontierKeys = new Set();
+      activeConstraints.forEach(c => c.cells.forEach(k => frontierKeys.add(k)));
+
+      const { probs, avgMinesOnFrontier } = calculateProbabilitiesAndMines(activeConstraints);
+      lastAnalysis.probabilities = probs;
+
+      // 3. Tính toán cho ô ở xa (Deep Cells)
+      const deepKeys = [];
+      for (const k of allUnopenedKeys) {
+        if (!frontierKeys.has(k)) deepKeys.push(k);
+      }
+
+      const remMinesGame = Math.max(0, TOTAL_MINES - totalFlags);
+      const minesLeftForDeep = Math.max(0, remMinesGame - avgMinesOnFrontier);
+      let deepProb = 0;
+
+      if (deepKeys.length > 0) {
+        deepProb = Math.min(1, minesLeftForDeep / deepKeys.length);
+        document.getElementById('stat-deep-prob').innerText = `${Math.round(deepProb * 100)}% (${deepKeys.length} ô)`;
+      } else {
+        document.getElementById('stat-deep-prob').innerText = 'Không có ô xa';
+      }
+
+      renderProbabilities(probs, deepProb, deepKeys);
+    }
+
+    function calculateProbabilitiesAndMines(constraints) {
+      const components = splitIntoComponents(constraints);
+      const finalProbs = {};
+      let totalAvgMines = 0;
+
+      for (const comp of components) {
+        const cellList = Array.from(comp.cells);
+        const compConstraints = comp.constraints.map(c => ({
+          cells: Array.from(c.cells),
+          mines: c.mines
+        }));
+
+        let validCount = 0;
+        let sumMinesInSolutions = 0;
+        const mineHits = {};
+        cellList.forEach(k => mineHits[k] = 0);
+        const assign = {};
+
+        function backtrack(idx) {
+          if (idx === cellList.length) {
+            for (const cons of compConstraints) {
+              let s = 0;
+              for (const k of cons.cells) s += assign[k];
+              if (s !== cons.mines) return;
+            }
+            validCount++;
+            let minesInThisSol = 0;
+            for (const k of cellList) {
+              if (assign[k] === 1) {
+                mineHits[k]++;
+                minesInThisSol++;
+              }
+            }
+            sumMinesInSolutions += minesInThisSol;
+            return;
+          }
+
+          const cellKey = cellList[idx];
+          for (const val of [0, 1]) {
+            assign[cellKey] = val;
+            let ok = true;
+            for (const cons of compConstraints) {
+              let s = 0, unassigned = 0;
+              for (const ck of cons.cells) {
+                if (ck in assign) s += assign[ck];
+                else unassigned++;
+              }
+              if (s > cons.mines || s + unassigned < cons.mines) { ok = false; break; }
+            }
+            if (ok) backtrack(idx + 1);
+            delete assign[cellKey];
+          }
         }
 
-        function saveMemoryToStorage() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryCache));
-            } catch (e) {
-                console.warn('LocalStorage limit reached');
-            }
-            renderHistoryList();
+        backtrack(0);
+
+        if (validCount > 0) {
+          for (const k of cellList) finalProbs[k] = mineHits[k] / validCount;
+          totalAvgMines += sumMinesInSolutions / validCount;
         }
+      }
 
-        // Initialize 6x8 Board
-        function initGrid() {
-            grid = [];
-            boardEl.innerHTML = '';
-            for (let r = 0; r < ROWS; r++) {
-                grid[r] = [];
-                for (let c = 0; c < COLS; c++) {
-                    grid[r][c] = {
-                        r, c,
-                        type: 'EMPTY',
-                        clueVal: null,
-                        el: null
-                    };
+      return { probs: finalProbs, avgMinesOnFrontier: totalAvgMines };
+    }
 
-                    const cellEl = document.createElement('div');
-                    cellEl.classList.add('cell');
-                    cellEl.dataset.r = r;
-                    cellEl.dataset.c = c;
+    function splitIntoComponents(constraints) {
+      const components = [];
+      const visited = new Set();
+      for (let i = 0; i < constraints.length; i++) {
+        if (visited.has(i)) continue;
+        const compCells = new Set();
+        const compCons = [];
+        const queue = [i];
+        visited.add(i);
 
-                    cellEl.addEventListener('click', () => applyTool(r, c));
-                    cellEl.addEventListener('contextmenu', (e) => {
-                        e.preventDefault();
-                        grid[r][c].type = 'EMPTY';
-                        grid[r][c].clueVal = null;
-                        renderCell(grid[r][c]);
-                        solveAndDiagnose();
-                    });
+        while (queue.length > 0) {
+          const idx = queue.shift();
+          const cons = constraints[idx];
+          compCons.push(cons);
+          for (const c of cons.cells) compCells.add(c);
 
-                    grid[r][c].el = cellEl;
-                    boardEl.appendChild(cellEl);
-                }
+          for (let j = 0; j < constraints.length; j++) {
+            if (!visited.has(j)) {
+              let share = false;
+              for (const c of constraints[j].cells) {
+                if (compCells.has(c)) { share = true; break; }
+              }
+              if (share) { visited.add(j); queue.push(j); }
             }
+          }
         }
+        components.push({ cells: compCells, constraints: compCons });
+      }
+      return components;
+    }
 
-        // Tool Selection
-        toolBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                toolBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                activeTool = btn.dataset.tool;
-            });
+    function renderCertainCells(safes, mines) {
+      for (const k of safes) {
+        const [r, c] = k.split(',').map(Number);
+        const cell = document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`);
+        cell.classList.add('safe');
+        cell.innerText = '✔';
+      }
+      for (const k of mines) {
+        const [r, c] = k.split(',').map(Number);
+        const cell = document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`);
+        cell.classList.add('mine');
+        cell.innerText = '💣';
+      }
+    }
+
+    function renderProbabilities(probs, deepProb, deepKeys) {
+      let minP = 1.0;
+      let best = null;
+
+      for (const [k, p] of Object.entries(probs)) {
+        const [r, c] = k.split(',').map(Number);
+        const cell = document.querySelector(`.cell[data-r='${r}'][data-c='${c}']`);
+        cell.classList.add('prob');
+        const percent = Math.round(p * 100);
+        cell.innerText = `${percent}%`;
+
+        if (p <= 0.3) cell.style.backgroundColor = 'rgba(166, 218, 149, 0.3)';
+        else if (p <= 0.6) cell.style.backgroundColor = 'rgba(238, 212, 159, 0.35)';
+        else cell.style.backgroundColor = 'rgba(237, 135, 150, 0.35)';
+
+        if (p < minP) { minP = p; best = k; }
+      }
+
+      lastAnalysis.bestKey = best;
+      lastAnalysis.recommendDeep = false;
+
+      // SO SÁNH CHIẾN THUẬT: BIÊN VS VÙNG XA
+      if (deepKeys.length > 0 && deepProb < minP) {
+        // Nổ ở xa ít hơn nổ ở biên -> Khuyên bấm ra xa
+        lastAnalysis.recommendDeep = true;
+        document.getElementById('stat-recommendation').innerText = `Bấm ô ngoài xa (${Math.round(deepProb * 100)}% mìn)!`;
+        
+        deepKeys.forEach(k => {
+          const [dr, dc] = k.split(',').map(Number);
+          document.querySelector(`.cell[data-r='${dr}'][data-c='${dc}']`).classList.add('deep-safe');
         });
+      } else if (best) {
+        const [br, bc] = best.split(',').map(Number);
+        document.querySelector(`.cell[data-r='${br}'][data-c='${bc}']`).classList.add('best-guess');
+        document.getElementById('stat-recommendation').innerText = `Đoán ô biên (${Math.round(minP * 100)}% mìn)`;
+      }
+    }
 
-        // Fast Keyboard Shortcuts
-        window.addEventListener('keydown', (e) => {
-            if (['0','1','2','3','4','5'].includes(e.key)) {
-                setActiveTool(e.key);
-            } else if (e.key.toLowerCase() === 'b') {
-                setActiveTool('B');
-            } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === 'x') {
-                setActiveTool('EMPTY');
-            }
-        });
+    function autoApplyMove() {
+      if (lastAnalysis.safeKeys.size === 0 && lastAnalysis.mineKeys.size === 0 && !lastAnalysis.bestKey) {
+        runDiagnosis();
+      }
 
-        function setActiveTool(tool) {
-            activeTool = tool;
-            toolBtns.forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
+      let changed = false;
+      for (const k of lastAnalysis.mineKeys) {
+        const [r, c] = k.split(',').map(Number);
+        if (boardData[r][c].state !== 'FLAG') {
+          boardData[r][c] = { state: 'FLAG', value: null };
+          changed = true;
         }
+      }
 
-        function applyTool(r, c) {
-            const cell = grid[r][c];
-            if (activeTool === 'EMPTY') {
-                cell.type = 'EMPTY';
-                cell.clueVal = null;
-            } else if (activeTool === 'B') {
-                cell.type = 'FIXED_BOMB';
-                cell.clueVal = null;
-            } else {
-                cell.type = 'CLUE';
-                cell.clueVal = parseInt(activeTool, 10);
-            }
-
-            renderCell(cell);
-            solveAndDiagnose();
+      for (const k of lastAnalysis.safeKeys) {
+        const [r, c] = k.split(',').map(Number);
+        if (boardData[r][c].state === 'UNOPENED') {
+          boardData[r][c] = { state: 'REVEALED', value: 0 };
+          changed = true;
         }
+      }
 
-        function renderCell(cell) {
-            const el = cell.el;
-            el.className = 'cell';
-            el.innerHTML = '';
-            if (cell.type === 'CLUE') {
-                el.classList.add('clue', `c-${cell.clueVal}`);
-                el.textContent = cell.clueVal;
-            } else if (cell.type === 'FIXED_BOMB') {
-                el.classList.add('fixed-bomb');
-                el.textContent = '💣';
-            }
-        }
+      if (changed) {
+        resetAnalysis();
+        renderBoard();
+        runDiagnosis();
+      }
+    }
 
-        function getNeighbors(r, c) {
-            const list = [];
-            for (let dr = -1; dr <= 1; dr++) {
-                for (let dc = -1; dc <= 1; dc++) {
-                    if (dr === 0 && dc === 0) continue;
-                    const nr = r + dr;
-                    const nc = c + dc;
-                    if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
-                        list.push(grid[nr][nc]);
-                    }
-                }
-            }
-            return list;
-        }
+    function resetAnalysis() {
+      lastAnalysis = { safeKeys: new Set(), mineKeys: new Set(), probabilities: {}, bestKey: null, recommendDeep: false };
+      document.getElementById('stat-safe').innerText = '0';
+      document.getElementById('stat-deep-prob').innerText = '-';
+      document.getElementById('stat-recommendation').innerText = 'Chờ phân tích';
+    }
 
-        /* -------------------------------------------------------------
-           BOARD SERIALIZATION & HASHING ENGINE
-        ------------------------------------------------------------- */
-        function computeBoardHash() {
-            let hashStr = '';
-            let hasClue = false;
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    const cell = grid[r][c];
-                    if (cell.type === 'EMPTY') hashStr += '.';
-                    else if (cell.type === 'FIXED_BOMB') { hashStr += 'B'; hasClue = true; }
-                    else { hashStr += cell.clueVal; hasClue = true; }
-                }
-            }
-            return hasClue ? hashStr : null;
-        }
+    function isSubset(s, superS) {
+      if (s.size >= superS.size) return false;
+      for (const e of s) if (!superS.has(e)) return false;
+      return true;
+    }
+    function setDifference(A, B) {
+      const d = new Set();
+      for (const e of A) if (!B.has(e)) d.add(e);
+      return d;
+    }
 
-        /* -------------------------------------------------------------
-           SMART DIAGNOSTIC ENGINE WITH MEMORY CACHE
-        ------------------------------------------------------------- */
-        function solveAndDiagnose() {
-            const startTime = performance.now();
+    window.addEventListener('keydown', (e) => {
+      if (!hoveredCell) return;
+      const { r, c } = hoveredCell;
+      if (e.key >= '0' && e.key <= '8') applyBrush(r, c, parseInt(e.key));
+      else if (e.key.toLowerCase() === 'f' || e.key === ' ') {
+        e.preventDefault();
+        applyBrush(r, c, boardData[r][c].state === 'FLAG' ? 'UNOPENED' : 'FLAG');
+      } else if (e.key.toLowerCase() === 'x') {
+        applyBrush(r, c, 'UNOPENED');
+      }
+    });
 
-            // Clear visual decorations
-            grid.flat().forEach(c => {
-                if (c.type === 'EMPTY') {
-                    c.el.className = 'cell';
-                    c.el.innerHTML = '';
-                }
-                c.el.classList.remove('ai-conflict');
-            });
-
-            const hash = computeBoardHash();
-            if (!hash) {
-                logContent.innerHTML = 'Điền số từ <b>1 đến 5</b> vào bàn cờ để hệ thống chẩn đoán.';
-                cacheBadge.textContent = '⚡ Chờ dữ liệu';
-                cacheBadge.classList.remove('hit');
-                return;
-            }
-
-            // ⚡ KIỂM TRA BỘ NHỚ ĐỆM (CACHE HIT CHECK)
-            if (memoryCache[hash]) {
-                const cached = memoryCache[hash];
-                applySolutionResults(cached.results);
-                const elapsed = (performance.now() - startTime).toFixed(2);
-                
-                cacheBadge.innerHTML = `⚡ Cache Hit (${elapsed} ms)`;
-                cacheBadge.classList.add('hit');
-                logContent.innerHTML = `<b>[Trích xuất từ Bộ Nhớ]</b> ${cached.summary}`;
-                return;
-            }
-
-            // NẾU CHƯA CÓ TRONG CACHE: TIẾN HÀNH GIẢI MỚI
-            cacheBadge.textContent = '⚙️ Đang phân tích...';
-            cacheBadge.classList.remove('hit');
-
-            const clues = grid.flat().filter(c => c.type === 'CLUE');
-            const fixedBombs = grid.flat().filter(c => c.type === 'FIXED_BOMB');
-            const emptyCells = grid.flat().filter(c => c.type === 'EMPTY');
-
-            // 1. Kiểm tra mâu thuẫn cục bộ
-            for (let clue of clues) {
-                const neighbors = getNeighbors(clue.r, clue.c);
-                const nBombs = neighbors.filter(n => n.type === 'FIXED_BOMB').length;
-                const nEmpty = neighbors.filter(n => n.type === 'EMPTY').length;
-
-                if (nBombs > clue.clueVal || (nBombs + nEmpty) < clue.clueVal) {
-                    clue.el.classList.add('ai-conflict');
-                    logContent.innerHTML = `<span style="color:var(--accent-rose);font-weight:700">Mâu thuẫn logic tại ô [${clue.r + 1}, ${clue.c + 1}]!</span>`;
-                    cacheBadge.textContent = '❌ Mâu thuẫn';
-                    return;
-                }
-            }
-
-            // 2. Tách biến biên (Boundary Extraction)
-            const boundaryMap = new Map();
-            const boundaryList = [];
-
-            emptyCells.forEach(cell => {
-                const adjClues = getNeighbors(cell.r, cell.c).filter(n => n.type === 'CLUE');
-                if (adjClues.length > 0) {
-                    boundaryMap.set(`${cell.r},${cell.c}`, boundaryList.length);
-                    boundaryList.push(cell);
-                }
-            });
-
-            const nonBoundaryEmpty = emptyCells.filter(c => !boundaryMap.has(`${c.r},${c.c}`));
-
-            // 3. Chuẩn bị ràng buộc
-            const constraintList = clues.map(clue => {
-                const neighbors = getNeighbors(clue.r, clue.c);
-                const fixedCount = neighbors.filter(n => n.type === 'FIXED_BOMB').length;
-                const varIndices = [];
-                neighbors.forEach(n => {
-                    const key = `${n.r},${n.c}`;
-                    if (boundaryMap.has(key)) varIndices.push(boundaryMap.get(key));
-                });
-                return { required: clue.clueVal - fixedCount, vars: varIndices };
-            });
-
-            const numVars = boundaryList.length;
-            const assignment = new Array(numVars).fill(0);
-            let validConfigsCount = 0;
-            const mineCountPerVar = new Array(numVars).fill(0);
-
-            const varToConstraints = Array.from({ length: numVars }, () => []);
-            constraintList.forEach((c, cIdx) => {
-                c.vars.forEach(v => varToConstraints[v].push(cIdx));
-            });
-
-            function nCr(n, r) {
-                if (r < 0 || r > n) return 0;
-                if (r === 0 || r === n) return 1;
-                let res = 1;
-                for (let i = 1; i <= r; i++) res = res * (n - (r - i)) / i;
-                return res;
-            }
-
-            function backtrack(idx, currentMines) {
-                if (currentMines + fixedBombs.length > TOTAL_MINES) return;
-
-                if (idx === numVars) {
-                    for (let c of constraintList) {
-                        let sum = 0;
-                        for (let v of c.vars) sum += assignment[v];
-                        if (sum !== c.required) return;
-                    }
-
-                    const rem = TOTAL_MINES - (fixedBombs.length + currentMines);
-                    const combos = nCr(nonBoundaryEmpty.length, rem);
-
-                    if (combos > 0) {
-                        validConfigsCount += combos;
-                        for (let i = 0; i < numVars; i++) {
-                            if (assignment[i] === 1) mineCountPerVar[i] += combos;
-                        }
-                    }
-                    return;
-                }
-
-                for (let val of [0, 1]) {
-                    assignment[idx] = val;
-                    const nextMines = currentMines + val;
-                    let possible = true;
-
-                    for (let cIdx of varToConstraints[idx]) {
-                        const constr = constraintList[cIdx];
-                        let assignedSum = 0;
-                        let unassigned = 0;
-                        for (let v of constr.vars) {
-                            if (v <= idx) assignedSum += assignment[v];
-                            else unassigned++;
-                        }
-                        if (assignedSum > constr.required || assignedSum + unassigned < constr.required) {
-                            possible = false;
-                            break;
-                        }
-                    }
-
-                    if (possible) backtrack(idx + 1, nextMines);
-                }
-            }
-
-            backtrack(0, 0);
-
-            const elapsed = (performance.now() - startTime).toFixed(2);
-
-            if (validConfigsCount === 0) {
-                logContent.innerHTML = `<span style="color:var(--accent-rose);font-weight:700">Thế cờ vô nghiệm! Không thể xếp đủ 11 bom.</span>`;
-                cacheBadge.textContent = '❌ Không có nghiệm';
-                return;
-            }
-
-            // Gom kết quả giải
-            const results = [];
-            let safeCount = 0;
-            let bombCount = 0;
-
-            boundaryList.forEach((cell, idx) => {
-                const prob = mineCountPerVar[idx] / validConfigsCount;
-                results.push({ r: cell.r, c: cell.c, prob });
-                if (prob === 0) safeCount++;
-                if (prob === 1) bombCount++;
-            });
-
-            applySolutionResults(results);
-
-            let summaryText = `Tìm thấy <b style="color:var(--accent-emerald)">${safeCount} ô an toàn</b>, <b style="color:var(--accent-rose)">${bombCount} quả bom</b> trong ${validConfigsCount} cấu hình.`;
-            logContent.innerHTML = summaryText;
-            cacheBadge.textContent = `⚡ Đã giải & Lưu (${elapsed} ms)`;
-
-            // 💾 LƯU KẾT QUẢ VÀO CACHE & LỊCH SỬ
-            memoryCache[hash] = {
-                hash,
-                boardData: extractCompactBoard(),
-                results,
-                summary: summaryText,
-                safeCount,
-                bombCount,
-                configs: validConfigsCount,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-                solveTime: elapsed
-            };
-
-            saveMemoryToStorage();
-        }
-
-        function applySolutionResults(results) {
-            results.forEach(res => {
-                const cell = grid[res.r][res.c];
-                if (cell.type === 'EMPTY') {
-                    if (res.prob === 0) {
-                        cell.el.classList.add('ai-safe');
-                        cell.el.innerHTML = '<span class="safe-tag">✓ AN TOÀN</span>';
-                    } else if (res.prob === 1) {
-                        cell.el.classList.add('ai-bomb');
-                        cell.el.innerHTML = '<span class="bomb-tag">💣 BOM</span>';
-                    } else {
-                        const percent = Math.round(res.prob * 100);
-                        cell.el.innerHTML = `<span class="prob-subtext">${percent}%💣</span>`;
-                    }
-                }
-            });
-        }
-
-        function extractCompactBoard() {
-            return grid.map(row => row.map(c => ({
-                t: c.type,
-                v: c.clueVal
-            })));
-        }
-
-        /* -------------------------------------------------------------
-           HISTORY PANEL RENDERING
-        ------------------------------------------------------------- */
-        function renderHistoryList() {
-            const items = Object.values(memoryCache).reverse();
-            if (items.length === 0) {
-                historyContainer.innerHTML = `<div class="empty-history">Chưa có thế cờ nào trong bộ nhớ.<br>Hãy điền số và chạy chẩn đoán để lưu!</div>`;
-                return;
-            }
-
-            historyContainer.innerHTML = '';
-            items.slice(0, 15).forEach((item) => {
-                const div = document.createElement('div');
-                div.className = 'history-item';
-                div.innerHTML = `
-                    <div class="history-item-top">
-                        <span class="history-time">⏱️ ${item.timestamp}</span>
-                        <span class="badge-speed">${item.solveTime} ms</span>
-                    </div>
-                    <div class="history-stats">
-                        <span class="badge-safe">✓ ${item.safeCount} An Toàn</span>
-                        <span class="badge-bomb">💣 ${item.bombCount} Bom</span>
-                    </div>
-                `;
-
-                div.addEventListener('click', () => loadBoardFromHistory(item));
-                historyContainer.appendChild(div);
-            });
-        }
-
-        function loadBoardFromHistory(item) {
-            initGrid();
-            for (let r = 0; r < ROWS; r++) {
-                for (let c = 0; c < COLS; c++) {
-                    const saved = item.boardData[r][c];
-                    grid[r][c].type = saved.t;
-                    grid[r][c].clueVal = saved.v;
-                    renderCell(grid[r][c]);
-                }
-            }
-            solveAndDiagnose();
-        }
-
-        // Action Handlers
-        document.getElementById('btn-clear-cache').addEventListener('click', () => {
-            if (confirm('Bạn có chắc muốn xóa sạch toàn bộ lịch sử bộ nhớ đệm?')) {
-                memoryCache = {};
-                localStorage.removeItem(STORAGE_KEY);
-                renderHistoryList();
-                solveAndDiagnose();
-            }
-        });
-
-        document.getElementById('btn-example').addEventListener('click', () => {
-            initGrid();
-            const sample = [
-                {r: 2, c: 2, v: 1}, {r: 2, c: 3, v: 2}, {r: 2, c: 4, v: 1},
-                {r: 3, c: 2, v: 1}, {r: 3, c: 4, v: 1}
-            ];
-            sample.forEach(s => {
-                grid[s.r][s.c].type = 'CLUE';
-                grid[s.r][s.c].clueVal = s.v;
-                renderCell(grid[s.r][s.c]);
-            });
-            solveAndDiagnose();
-        });
-
-        document.getElementById('btn-clear').addEventListener('click', () => {
-            initGrid();
-            logContent.innerHTML = 'Bàn cờ đã làm mới. Chọn số để bắt đầu.';
-            cacheBadge.textContent = '⚡ Đã làm mới';
-            cacheBadge.classList.remove('hit');
-        });
-
-        document.getElementById('btn-run').addEventListener('click', solveAndDiagnose);
-
-        // Khởi động
-        initGrid();
-        loadMemoryFromStorage();
-    </script>
+    initBoard();
+  </script>
 </body>
 </html>
