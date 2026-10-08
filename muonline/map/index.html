@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MU Online - Radar Săn 2 Thỏ Tối Giản</title>
+    <title>MU Online - Radar Săn 2 Thỏ</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -24,7 +24,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-dark); color: var(--text-light); overflow: hidden; height: 100vh; display: flex; }
 
-        /* Sidebar Gọn Gàng */
+        /* Sidebar */
         #sidebar {
             width: 340px;
             background: var(--panel-bg);
@@ -156,7 +156,7 @@
         }
         .btn-record:hover { filter: brightness(1.2); box-shadow: 0 0 12px var(--gold-glow); }
 
-        /* Thông tin khoảng cách */
+        /* Khoảng cách 2 thỏ */
         .dist-info {
             display: flex;
             justify-content: space-between;
@@ -168,14 +168,13 @@
         }
         .dist-value { font-family: monospace; font-weight: bold; color: #ffd700; }
 
-        /* Thanh Quản Lý Bộ Nhớ Nhỏ Gọn */
+        /* Thanh Quản Lý Bộ Nhớ */
         .storage-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 0.72rem;
             color: #8fa0b5;
-            padding-top: 4px;
         }
 
         .storage-btns {
@@ -187,7 +186,7 @@
             background: transparent;
             border: 1px solid rgba(197,160,89,0.3);
             color: #ccc;
-            padding: 2px 6px;
+            padding: 3px 7px;
             border-radius: 3px;
             cursor: pointer;
             font-size: 0.68rem;
@@ -217,37 +216,17 @@
             100% { transform: scale(0.95); }
         }
 
-        /* DẤU CHẤM LỊCH SỬ (HEAT-DOTS) */
+        /* Dấu chấm lịch sử (Heat-Dots) */
         .dot-marker {
             border-radius: 50%;
             cursor: pointer;
             transition: transform 0.2s;
         }
-        .dot-marker:hover {
-            transform: scale(1.8);
-        }
+        .dot-marker:hover { transform: scale(1.8); }
 
-        /* Cấp 1: Ra 1 lần (Vàng nhỏ) */
-        .dot-lvl-1 {
-            width: 8px; height: 8px;
-            background: #ffd700;
-            border: 1px solid #fff;
-            box-shadow: 0 0 4px #ffd700;
-        }
-        /* Cấp 2: Ra 2-3 lần (Cam vừa) */
-        .dot-lvl-2 {
-            width: 10px; height: 10px;
-            background: #ff9100;
-            border: 1.5px solid #fff;
-            box-shadow: 0 0 8px #ff9100;
-        }
-        /* Cấp 3: Ra >= 4 lần ("Ổ Thỏ" Hồng Neon nổi bật) */
-        .dot-lvl-3 {
-            width: 13px; height: 13px;
-            background: #ff0055;
-            border: 2px solid #fff;
-            box-shadow: 0 0 14px #ff0055;
-        }
+        .dot-lvl-1 { width: 8px; height: 8px; background: #ffd700; border: 1px solid #fff; box-shadow: 0 0 4px #ffd700; }
+        .dot-lvl-2 { width: 10px; height: 10px; background: #ff9100; border: 1.5px solid #fff; box-shadow: 0 0 8px #ff9100; }
+        .dot-lvl-3 { width: 13px; height: 13px; background: #ff0055; border: 2px solid #fff; box-shadow: 0 0 14px #ff0055; }
 
         .origin-badge {
             position: absolute; top: 15px; left: 15px;
@@ -259,7 +238,6 @@
 </head>
 <body>
 
-    <!-- Sidebar Tối Giản -->
     <div id="sidebar">
         <h1 class="game-title" id="currentMapTitle">NORIA</h1>
 
@@ -288,11 +266,11 @@
                 <div class="coord-inputs">
                     <div class="input-group">
                         <label>X (Dọc: 0-255)</label>
-                        <input type="number" id="x1" min="0" max="255" value="150" placeholder="0-255">
+                        <input type="number" id="x1" min="0" max="255" value="150">
                     </div>
                     <div class="input-group">
                         <label>Y (Ngang: 0-255)</label>
-                        <input type="number" id="y1" min="0" max="255" value="120" placeholder="0-255">
+                        <input type="number" id="y1" min="0" max="255" value="120">
                     </div>
                 </div>
             </div>
@@ -306,57 +284,56 @@
                 <div class="coord-inputs">
                     <div class="input-group">
                         <label>X (Dọc: 0-255)</label>
-                        <input type="number" id="x2" min="0" max="255" value="172" placeholder="0-255">
+                        <input type="number" id="x2" min="0" max="255" value="172">
                     </div>
                     <div class="input-group">
                         <label>Y (Ngang: 0-255)</label>
-                        <input type="number" id="y2" min="0" max="255" value="105" placeholder="0-255">
+                        <input type="number" id="y2" min="0" max="255" value="105">
                     </div>
                 </div>
             </div>
 
-            <!-- Đo khoảng cách -->
             <div class="dist-info">
                 <span>Khoảng cách 2 Thỏ:</span>
                 <span class="dist-value" id="distText">-- tiles</span>
             </div>
 
-            <button class="btn-record" onclick="recordBothSpawns()">
-                💾 Lưu Vào Bộ Nhớ (+1 Lần)
-            </button>
+            <button class="btn-record" onclick="recordBothSpawns()">💾 Lưu Dấu Chấm (+1 Lần)</button>
         </div>
 
-        <!-- Thanh Tiện Ích Bộ Nhớ Nhỏ Gọn (Không hiển thị danh sách dài) -->
+        <!-- Quản Lý Bộ Nhớ -->
         <div class="panel-box">
             <div class="storage-bar">
                 <span id="savedCountText">Đã lưu: 0 ổ thỏ</span>
                 <div class="storage-btns">
                     <button class="btn-tiny" onclick="toggleDots()" id="btnToggleDots">👁️ Ẩn Chấm</button>
-                    <button class="btn-tiny danger" onclick="clearMapHistory()" title="Xóa toàn bộ điểm map này">🗑️ Xóa</button>
+                    <button class="btn-tiny danger" onclick="clearMapHistory()">🗑️ Xóa</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Map Viewport -->
+    <!-- Map Area -->
     <div id="map-container">
         <div class="origin-badge" id="mapBadge">🗺️ Noria | ↖ [X:0, Y:0]</div>
         <div id="map"></div>
     </div>
 
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
+        // =======================================================
+        // DANH SÁCH BẢN ĐỒ (Đường dẫn có thể trỏ tới ảnh tự xuất của bạn)
+        // =======================================================
         const MAP_DATA = {
-            noria: { name: "Noria", img: "https://muonlinefanz.com/tools/maps/data/graphics/Noria/map.jpg" },
-            lorencia: { name: "Lorencia", img: "https://muonlinefanz.com/tools/maps/data/graphics/Lorencia/map.jpg" },
-            devias: { name: "Devias", img: "https://muonlinefanz.com/tools/maps/data/graphics/Devias/map.jpg" },
-            elveland: { name: "Elveland", img: "https://muonlinefanz.com/tools/maps/data/graphics/Elveland/map.jpg" },
-            kanturu: { name: "Kanturu Ruins", img: "https://muonlinefanz.com/tools/maps/data/graphics/Kanturu%20Ruins/map.jpg" },
-            karutan1: { name: "Karutan 1", img: "https://muonlinefanz.com/tools/maps/data/graphics/Karutan/map.jpg" },
-            karutan2: { name: "Karutan 2", img: "https://muonlinefanz.com/tools/maps/data/graphics/Karutan/map2.jpg" },
-            ferea: { name: "Ferea", img: "https://i.ibb.co/gZxjvnMj/ferea-new.png" }
+            noria:    { name: "Noria", img: "./images/noria.jpg" },
+            lorencia: { name: "Lorencia", img: "./images/lorencia.jpg" },
+            devias:   { name: "Devias", img: "./images/devias.jpg" },
+            elveland: { name: "Elveland", img: "./images/elveland.jpg" },
+            kanturu:  { name: "Kanturu Ruins", img: "./images/kanturu.jpg" },
+            karutan1: { name: "Karutan 1", img: "./images/Karutan1.jpg" },
+            karutan2: { name: "Karutan 2", img: "./images/karutan2.jpg" },
+            ferea:    { name: "Ferea", img: "./images/ferea.jpg" }
         };
 
         const MAP_SIZE = 256;
@@ -364,18 +341,8 @@
         let currentMapKey = 'noria';
         let showDots = true;
 
-        // Lưu trữ hoàn toàn trong LocalStorage (Không vẽ danh sách ra HTML)
-        let rabbitSpawns = JSON.parse(localStorage.getItem('MU_RABBIT_SPAWNS')) || {
-            noria: [
-                { x: 150, y: 120, count: 5 },
-                { x: 172, y: 105, count: 2 },
-                { x: 190, y: 90, count: 1 }
-            ]
-        };
-
-        function saveSpawns() {
-            localStorage.setItem('MU_RABBIT_SPAWNS', JSON.stringify(rabbitSpawns));
-        }
+        let rabbitSpawns = JSON.parse(localStorage.getItem('MU_RABBIT_SPAWNS')) || {};
+        function saveSpawns() { localStorage.setItem('MU_RABBIT_SPAWNS', JSON.stringify(rabbitSpawns)); }
 
         // Preload hình ảnh
         Object.keys(MAP_DATA).forEach(k => { const img = new Image(); img.src = MAP_DATA[k].img; });
@@ -389,7 +356,7 @@
             mapSelectElem.appendChild(opt);
         });
 
-        // Khởi tạo Map
+        // Khởi tạo Leaflet Map 2D
         const map = L.map('map', {
             crs: L.CRS.Simple, minZoom: -1, maxZoom: 3,
             maxBounds: bounds, maxBoundsViscosity: 1.0, attributionControl: false
@@ -398,13 +365,17 @@
         let currentImageOverlay = L.imageOverlay(MAP_DATA[currentMapKey].img, bounds).addTo(map);
         map.fitBounds(bounds);
 
-        // Chuyển đổi tọa độ Matrix [X, Y]: X Dọc (0-255), Y Ngang (0-255)
+        // =======================================================
+        // CÔNG THỨC MATRIX CHUẨN 1:1 [X, Y]:
+        // X = Dọc (0 -> 255) | Y = Ngang (0 -> 255)
+        // =======================================================
         function leafletToGame(latlng) {
             return {
                 x: Math.max(0, Math.min(255, Math.floor(MAP_SIZE - latlng.lat))),
                 y: Math.max(0, Math.min(255, Math.floor(latlng.lng)))
             };
         }
+
         function gameToLeaflet(x, y) {
             return [(MAP_SIZE - 1) - x + 0.5, y + 0.5];
         }
@@ -415,32 +386,21 @@
         });
 
         // =======================================================
-        // QUẢN LÝ 2 THỎ ĐANG NHẬP & CÁC DẤU CHẤM LỊCH SỬ
+        // QUẢN LÝ MARKERS & LỊCH SỬ DẤU CHẤM
         // =======================================================
         let markerR1 = null, markerR2 = null;
         let connectionLine = null;
         let historyDotMarkers = [];
         let clickToggle = 0;
 
-        const iconR1 = L.divIcon({
-            className: 'custom-pin-r1',
-            html: '<div class="active-rabbit-pin pin-r1">T1</div>',
-            iconSize: [28, 28], iconAnchor: [14, 14]
-        });
-
-        const iconR2 = L.divIcon({
-            className: 'custom-pin-r2',
-            html: '<div class="active-rabbit-pin pin-r2">T2</div>',
-            iconSize: [28, 28], iconAnchor: [14, 14]
-        });
+        const iconR1 = L.divIcon({ className: 'custom-pin-r1', html: '<div class="active-rabbit-pin pin-r1">T1</div>', iconSize: [28, 28], iconAnchor: [14, 14] });
+        const iconR2 = L.divIcon({ className: 'custom-pin-r2', html: '<div class="active-rabbit-pin pin-r2">T2</div>', iconSize: [28, 28], iconAnchor: [14, 14] });
 
         function parseCoord(val) {
             if (val === '' || isNaN(val)) return null;
-            let num = parseInt(val, 10);
-            return Math.max(0, Math.min(255, num));
+            return Math.max(0, Math.min(255, parseInt(val, 10)));
         }
 
-        // Cập nhật vị trí 2 Thỏ đang nhập (Realtime)
         function updateActiveRabbits() {
             const x1 = parseCoord(document.getElementById('x1').value);
             const y1 = parseCoord(document.getElementById('y1').value);
@@ -449,7 +409,6 @@
 
             const hasR1 = (x1 !== null && y1 !== null);
             const hasR2 = (x2 !== null && y2 !== null);
-
             let pos1 = null, pos2 = null;
 
             if (hasR1) {
@@ -474,32 +433,19 @@
                 document.getElementById('labelR2').innerText = `[Chưa chọn]`;
             }
 
-            // Dây nối & Khoảng cách
             if (hasR1 && hasR2) {
                 if (connectionLine) connectionLine.setLatLngs([pos1, pos2]);
-                else {
-                    connectionLine = L.polyline([pos1, pos2], {
-                        color: '#ffd700',
-                        weight: 2.5,
-                        dashArray: '6, 8',
-                        opacity: 0.9
-                    }).addTo(map);
-                }
+                else connectionLine = L.polyline([pos1, pos2], { color: '#ffd700', weight: 2.5, dashArray: '6, 8', opacity: 0.9 }).addTo(map);
 
                 const dx = Math.abs(x2 - x1);
                 const dy = Math.abs(y2 - y1);
-                const dist = Math.sqrt(dx * dx + dy * dy).toFixed(1);
-                const steps = dx + dy;
-                document.getElementById('distText').innerText = `${dist} ô (~${steps} bước)`;
+                document.getElementById('distText').innerText = `${Math.sqrt(dx*dx + dy*dy).toFixed(1)} ô (~${dx+dy} bước)`;
             } else {
                 if (connectionLine) { map.removeLayer(connectionLine); connectionLine = null; }
                 document.getElementById('distText').innerText = `-- tiles`;
             }
         }
 
-        // =======================================================
-        // HIỂN THỊ DẤU CHẤM LỊCH SỬ (THAY CHO CON SỐ VÀ DANH SÁCH)
-        // =======================================================
         function renderHistoryDots() {
             historyDotMarkers.forEach(m => map.removeLayer(m));
             historyDotMarkers = [];
@@ -511,17 +457,8 @@
 
             spawns.forEach(item => {
                 const pos = gameToLeaflet(item.x, item.y);
-
-                // Phân loại cấp độ chấm theo số lần xuất hiện
-                let lvlClass = 'dot-lvl-1';
-                let dotSize = 8;
-                if (item.count >= 4) {
-                    lvlClass = 'dot-lvl-3';
-                    dotSize = 13;
-                } else if (item.count >= 2) {
-                    lvlClass = 'dot-lvl-2';
-                    dotSize = 10;
-                }
+                let lvlClass = item.count >= 4 ? 'dot-lvl-3' : (item.count >= 2 ? 'dot-lvl-2' : 'dot-lvl-1');
+                let dotSize = item.count >= 4 ? 13 : (item.count >= 2 ? 10 : 8);
 
                 const dotIcon = L.divIcon({
                     className: 'custom-dot-wrapper',
@@ -531,23 +468,12 @@
                 });
 
                 const marker = L.marker(pos, { icon: dotIcon }).addTo(map);
-                marker.bindTooltip(`[${item.x}, ${item.y}] • Xuất hiện: ${item.count} lần`, {
-                    direction: 'top',
-                    offset: [0, -6],
-                    opacity: 0.9
-                });
-
-                // Click vào dấu chấm sẽ điền tọa độ vào ô nhập
-                marker.on('click', (e) => {
-                    L.DomEvent.stopPropagation(e);
-                    fillCoord(item.x, item.y);
-                });
-
+                marker.bindTooltip(`[${item.x}, ${item.y}] • Đã ra: ${item.count} lần`, { direction: 'top', offset: [0, -6] });
+                marker.on('click', (e) => { L.DomEvent.stopPropagation(e); fillCoord(item.x, item.y); });
                 historyDotMarkers.push(marker);
             });
         }
 
-        // Ghi nhận điểm mới vào LocalStorage
         function recordBothSpawns() {
             const x1 = parseCoord(document.getElementById('x1').value);
             const y1 = parseCoord(document.getElementById('y1').value);
@@ -555,28 +481,20 @@
             const y2 = parseCoord(document.getElementById('y2').value);
 
             if (!rabbitSpawns[currentMapKey]) rabbitSpawns[currentMapKey] = [];
-
             let recorded = 0;
 
             if (x1 !== null && y1 !== null) {
-                const exist1 = rabbitSpawns[currentMapKey].find(p => p.x === x1 && p.y === y1);
-                if (exist1) exist1.count += 1;
-                else rabbitSpawns[currentMapKey].push({ x: x1, y: y1, count: 1 });
+                const ex = rabbitSpawns[currentMapKey].find(p => p.x === x1 && p.y === y1);
+                if (ex) ex.count++; else rabbitSpawns[currentMapKey].push({ x: x1, y: y1, count: 1 });
                 recorded++;
             }
-
             if (x2 !== null && y2 !== null) {
-                const exist2 = rabbitSpawns[currentMapKey].find(p => p.x === x2 && p.y === y2);
-                if (exist2) exist2.count += 1;
-                else rabbitSpawns[currentMapKey].push({ x: x2, y: y2, count: 1 });
+                const ex = rabbitSpawns[currentMapKey].find(p => p.x === x2 && p.y === y2);
+                if (ex) ex.count++; else rabbitSpawns[currentMapKey].push({ x: x2, y: y2, count: 1 });
                 recorded++;
             }
 
-            if (recorded === 0) {
-                alert("Vui lòng nhập ít nhất 1 tọa độ hợp lệ!");
-                return;
-            }
-
+            if (recorded === 0) return alert("Vui lòng nhập ít nhất 1 tọa độ!");
             saveSpawns();
             renderHistoryDots();
             updateActiveRabbits();
@@ -595,33 +513,28 @@
             updateActiveRabbits();
         }
 
-        // Bật / Tắt hiển thị dấu chấm
         function toggleDots() {
             showDots = !showDots;
             document.getElementById('btnToggleDots').innerText = showDots ? "👁️ Ẩn Chấm" : "👁️ Hiện Chấm";
             renderHistoryDots();
         }
 
-        // Xóa sạch bộ nhớ của Map hiện tại
         function clearMapHistory() {
-            if (!confirm(`Xóa toàn bộ các dấu chấm lịch sử của map ${MAP_DATA[currentMapKey].name}?`)) return;
+            if (!confirm(`Xóa toàn bộ dấu chấm map ${MAP_DATA[currentMapKey].name}?`)) return;
             rabbitSpawns[currentMapKey] = [];
             saveSpawns();
             renderHistoryDots();
         }
 
-        // Lắng nghe gõ phím tức thì
         ['x1', 'y1', 'x2', 'y2'].forEach(id => {
             document.getElementById(id).addEventListener('input', () => updateActiveRabbits());
         });
 
-        // Click trên bản đồ để gán tọa độ luân phiên Thỏ 1 -> Thỏ 2
         map.on('click', function(e) {
             const { x, y } = leafletToGame(e.latlng);
             fillCoord(x, y);
         });
 
-        // Đổi bản đồ
         function onMapChange(key) {
             if (!MAP_DATA[key]) return;
             currentMapKey = key;
@@ -633,7 +546,6 @@
             updateActiveRabbits();
         }
 
-        // Khởi chạy
         renderHistoryDots();
         updateActiveRabbits();
     </script>
