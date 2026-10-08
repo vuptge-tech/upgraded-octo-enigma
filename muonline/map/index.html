@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MU Online - Radar Săn 2 Thỏ</title>
+    <title>MU Online - Radar Săn Thỏ Hàng Loạt</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -26,43 +26,76 @@
 
         /* Sidebar */
         #sidebar {
-            width: 340px;
+            width: 350px;
             background: var(--panel-bg);
             backdrop-filter: blur(10px);
             border-right: 2px solid var(--gold-border);
-            padding: 16px;
+            padding: 14px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
             z-index: 1000;
             box-shadow: 5px 0 25px rgba(0,0,0,0.8);
+            overflow-y: auto;
         }
 
         .game-title {
             font-family: 'Cinzel', serif;
-            font-size: 1.2rem;
+            font-size: 1.15rem;
             color: var(--gold-border);
             text-align: center;
             text-shadow: 0 0 10px var(--gold-glow);
             letter-spacing: 1px;
             border-bottom: 1px solid rgba(197, 160, 89, 0.3);
-            padding-bottom: 6px;
+            padding-bottom: 5px;
         }
 
         .panel-box {
             background: rgba(0, 0, 0, 0.45);
             border: 1px solid rgba(197, 160, 89, 0.2);
             border-radius: 6px;
-            padding: 10px;
+            padding: 9px;
         }
 
         .panel-box h3 {
             font-family: 'Cinzel', serif;
-            font-size: 0.78rem;
+            font-size: 0.76rem;
             color: var(--gold-border);
-            margin-bottom: 6px;
+            margin-bottom: 5px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Ô Dán Hàng Loạt (Batch Input) */
+        .batch-area {
+            width: 100%;
+            height: 60px;
+            background: #06080c;
+            border: 1px dashed var(--gold-border);
+            color: #fff;
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 0.72rem;
+            font-family: monospace;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .batch-area:focus {
+            border-color: var(--rabbit-1);
+            box-shadow: 0 0 8px rgba(0, 210, 255, 0.3);
+        }
+
+        .batch-status {
+            font-size: 0.68rem;
+            color: #00e676;
+            margin-top: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         /* Map Selector */
@@ -83,13 +116,13 @@
 
         /* Realtime Coordinate */
         .live-coord {
-            font-size: 1.15rem;
+            font-size: 1.05rem;
             font-weight: bold;
             color: var(--gold-border);
             text-align: center;
             font-family: monospace;
             background: #05070a;
-            padding: 6px;
+            padding: 5px;
             border-radius: 4px;
             border: 1px dashed rgba(197, 160, 89, 0.4);
         }
@@ -97,8 +130,8 @@
         /* Rabbit Cards */
         .rabbit-input-card {
             border-left: 3px solid;
-            padding: 6px 10px;
-            margin-bottom: 8px;
+            padding: 5px 8px;
+            margin-bottom: 6px;
             background: rgba(255, 255, 255, 0.02);
             border-radius: 0 4px 4px 0;
         }
@@ -106,90 +139,90 @@
         .rabbit-input-card.card-2 { border-color: var(--rabbit-2); }
 
         .card-header {
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             font-weight: bold;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             display: flex;
             justify-content: space-between;
         }
         .card-1 .card-header { color: var(--rabbit-1); }
         .card-2 .card-header { color: var(--rabbit-2); }
 
-        .coord-inputs { display: flex; gap: 8px; }
+        .coord-inputs { display: flex; gap: 6px; }
         .input-group { flex: 1; }
-        .input-group label { display: block; font-size: 0.65rem; color: #8fa0b5; margin-bottom: 2px; }
+        .input-group label { display: block; font-size: 0.62rem; color: #8fa0b5; margin-bottom: 1px; }
 
         input[type="number"] {
             width: 100%;
             background: #06080c;
             border: 1px solid rgba(197, 160, 89, 0.4);
             color: #fff;
-            padding: 6px;
+            padding: 5px;
             border-radius: 4px;
             font-weight: bold;
             outline: none;
             text-align: center;
-            font-size: 0.95rem;
-            transition: all 0.2s;
+            font-size: 0.9rem;
         }
 
         input[type="number"]:focus {
             border-color: var(--gold-border);
             box-shadow: 0 0 8px var(--gold-glow);
-            background: #0d121c;
         }
 
-        /* Nút Ghi Nhận */
-        .btn-record {
+        /* Nút Bấm */
+        .btn-action {
             width: 100%;
             background: linear-gradient(180deg, #d4af37 0%, #8a6d1c 100%);
             border: 1px solid #ffe89e;
             color: #000;
-            padding: 9px;
+            padding: 7px;
             font-weight: bold;
             font-family: 'Cinzel', serif;
-            font-size: 0.78rem;
+            font-size: 0.75rem;
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s ease;
             margin-top: 4px;
         }
-        .btn-record:hover { filter: brightness(1.2); box-shadow: 0 0 12px var(--gold-glow); }
+        .btn-action:hover { filter: brightness(1.2); box-shadow: 0 0 10px var(--gold-glow); }
 
-        /* Khoảng cách 2 thỏ */
+        .btn-batch-save {
+            background: linear-gradient(180deg, #ff4081 0%, #c2185b 100%);
+            border: 1px solid #ff80ab;
+            color: #fff;
+        }
+        .btn-batch-save:hover { box-shadow: 0 0 10px rgba(255, 64, 129, 0.5); }
+
+        /* Khoảng cách */
         .dist-info {
             display: flex;
             justify-content: space-between;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             color: #b0bec5;
-            padding: 4px 0;
+            padding: 3px 0;
             border-top: 1px solid rgba(255,255,255,0.08);
-            margin-top: 4px;
+            margin-top: 3px;
         }
         .dist-value { font-family: monospace; font-weight: bold; color: #ffd700; }
 
-        /* Thanh Quản Lý Bộ Nhớ */
+        /* Quản lý bộ nhớ */
         .storage-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             color: #8fa0b5;
-        }
-
-        .storage-btns {
-            display: flex;
-            gap: 8px;
         }
 
         .btn-tiny {
             background: transparent;
             border: 1px solid rgba(197,160,89,0.3);
             color: #ccc;
-            padding: 3px 7px;
+            padding: 2px 6px;
             border-radius: 3px;
             cursor: pointer;
-            font-size: 0.68rem;
+            font-size: 0.65rem;
         }
         .btn-tiny:hover { color: #fff; border-color: var(--gold-border); }
         .btn-tiny.danger:hover { color: #ff3860; border-color: #ff3860; }
@@ -198,9 +231,9 @@
         #map-container { flex: 1; height: 100vh; background: #05070a; position: relative; }
         #map { width: 100%; height: 100%; }
 
-        /* Active Markers */
+        /* Marker 2 Thỏ hiện tại */
         .active-rabbit-pin {
-            width: 28px; height: 28px;
+            width: 26px; height: 26px;
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             border: 2px solid #fff;
@@ -216,14 +249,9 @@
             100% { transform: scale(0.95); }
         }
 
-        /* Dấu chấm lịch sử (Heat-Dots) */
-        .dot-marker {
-            border-radius: 50%;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
+        /* Dấu chấm lịch sử */
+        .dot-marker { border-radius: 50%; cursor: pointer; transition: transform 0.2s; }
         .dot-marker:hover { transform: scale(1.8); }
-
         .dot-lvl-1 { width: 8px; height: 8px; background: #ffd700; border: 1px solid #fff; box-shadow: 0 0 4px #ffd700; }
         .dot-lvl-2 { width: 10px; height: 10px; background: #ff9100; border: 1.5px solid #fff; box-shadow: 0 0 8px #ff9100; }
         .dot-lvl-3 { width: 13px; height: 13px; background: #ff0055; border: 2px solid #fff; box-shadow: 0 0 14px #ff0055; }
@@ -231,7 +259,7 @@
         .origin-badge {
             position: absolute; top: 15px; left: 15px;
             background: rgba(0, 0, 0, 0.85); border: 1px solid var(--gold-border);
-            padding: 6px 12px; border-radius: 4px; font-size: 0.75rem; color: var(--gold-border);
+            padding: 5px 10px; border-radius: 4px; font-size: 0.72rem; color: var(--gold-border);
             z-index: 500; pointer-events: none; font-family: 'Cinzel', serif;
         }
     </style>
@@ -241,23 +269,36 @@
     <div id="sidebar">
         <h1 class="game-title" id="currentMapTitle">NORIA</h1>
 
-        <!-- Map Selector -->
+        <!-- ⚡ KHỐI DÁN HÀNG LOẠT (SMART BATCH PASTE) -->
+        <div class="panel-box">
+            <h3><span>📋 Dán Nhanh Toàn Bộ Map</span></h3>
+            <textarea id="batchInput" class="batch-area" placeholder="Dán đoạn chat/thông báo vào đây...
+VD: Noria (185,32) Lorencia (156,80)..." oninput="processBatchInput()"></textarea>
+            <div class="batch-status">
+                <span id="batchCountText">Chưa có dữ liệu dán</span>
+                <button class="btn-tiny" onclick="clearBatch()" style="color:#aaa;">Xóa ô dán</button>
+            </div>
+            <button class="btn-action btn-batch-save" onclick="saveAllBatchToHistory()">
+                💾 Lưu Toàn Bộ Đợt Này Vào Ổ Thỏ
+            </button>
+        </div>
+
+        <!-- Chọn Map -->
         <div class="panel-box">
             <h3>Chọn Bản Đồ</h3>
             <select class="map-select" id="mapSelect" onchange="onMapChange(this.value)"></select>
         </div>
 
-        <!-- Realtime Coordinate -->
+        <!-- Tọa độ con trỏ -->
         <div class="panel-box">
             <h3>Tọa độ con trỏ [X, Y]</h3>
             <div class="live-coord" id="cursorCoord">X: 0 | Y: 0</div>
         </div>
 
-        <!-- Form 2 Tọa Độ Thỏ -->
+        <!-- Form 2 Tọa Độ Thỏ (Tự điền khi đổi Map) -->
         <div class="panel-box">
-            <h3>Nhập 2 Tọa Độ Thỏ</h3>
+            <h3>Vị Trí Thỏ Map Hiện Tại</h3>
 
-            <!-- Thỏ 1 -->
             <div class="rabbit-input-card card-1">
                 <div class="card-header">
                     <span>🐇 THỎ 1 (ĐIỂM A)</span>
@@ -266,16 +307,15 @@
                 <div class="coord-inputs">
                     <div class="input-group">
                         <label>X (Dọc: 0-255)</label>
-                        <input type="number" id="x1" min="0" max="255" value="150">
+                        <input type="number" id="x1" min="0" max="255">
                     </div>
                     <div class="input-group">
                         <label>Y (Ngang: 0-255)</label>
-                        <input type="number" id="y1" min="0" max="255" value="120">
+                        <input type="number" id="y1" min="0" max="255">
                     </div>
                 </div>
             </div>
 
-            <!-- Thỏ 2 -->
             <div class="rabbit-input-card card-2">
                 <div class="card-header">
                     <span>🐰 THỎ 2 (ĐIỂM B)</span>
@@ -284,11 +324,11 @@
                 <div class="coord-inputs">
                     <div class="input-group">
                         <label>X (Dọc: 0-255)</label>
-                        <input type="number" id="x2" min="0" max="255" value="172">
+                        <input type="number" id="x2" min="0" max="255">
                     </div>
                     <div class="input-group">
                         <label>Y (Ngang: 0-255)</label>
-                        <input type="number" id="y2" min="0" max="255" value="105">
+                        <input type="number" id="y2" min="0" max="255">
                     </div>
                 </div>
             </div>
@@ -298,14 +338,14 @@
                 <span class="dist-value" id="distText">-- tiles</span>
             </div>
 
-            <button class="btn-record" onclick="recordBothSpawns()">💾 Lưu Dấu Chấm (+1 Lần)</button>
+            <button class="btn-action" onclick="recordBothSpawns()">💾 Lưu Dấu Chấm Map Này (+1)</button>
         </div>
 
-        <!-- Quản Lý Bộ Nhớ -->
+        <!-- Quản lý bộ nhớ -->
         <div class="panel-box">
             <div class="storage-bar">
                 <span id="savedCountText">Đã lưu: 0 ổ thỏ</span>
-                <div class="storage-btns">
+                <div style="display:flex; gap:6px;">
                     <button class="btn-tiny" onclick="toggleDots()" id="btnToggleDots">👁️ Ẩn Chấm</button>
                     <button class="btn-tiny danger" onclick="clearMapHistory()">🗑️ Xóa</button>
                 </div>
@@ -313,7 +353,7 @@
         </div>
     </div>
 
-    <!-- Map Area -->
+    <!-- Map Viewport -->
     <div id="map-container">
         <div class="origin-badge" id="mapBadge">🗺️ Noria | ↖ [X:0, Y:0]</div>
         <div id="map"></div>
@@ -323,7 +363,7 @@
 
     <script>
         // =======================================================
-        // DANH SÁCH BẢN ĐỒ (Đường dẫn có thể trỏ tới ảnh tự xuất của bạn)
+        // DANH SÁCH BẢN ĐỒ DÙNG ĐƯỜNG DẪN ẢNH NỘI BỘ (LOCAL)
         // =======================================================
         const MAP_DATA = {
             noria:    { name: "Noria", img: "./images/noria.jpg" },
@@ -336,15 +376,35 @@
             ferea:    { name: "Ferea", img: "./images/ferea.jpg" }
         };
 
+        // Bảng ánh xạ tên map viết trong văn bản -> Key hệ thống
+        const MAP_KEY_ALIAS = {
+            'noria': 'noria',
+            'lorencia': 'lorencia',
+            'devias': 'devias',
+            'elveland': 'elveland',
+            'elbeland': 'elveland',
+            'kanturu ruins': 'kanturu',
+            'kanturu': 'kanturu',
+            'karutan 1': 'karutan1',
+            'karutan1': 'karutan1',
+            'karutan 2': 'karutan2',
+            'karutan2': 'karutan2',
+            'ferea': 'ferea'
+        };
+
         const MAP_SIZE = 256;
         const bounds = [[0, 0], [MAP_SIZE, MAP_SIZE]];
         let currentMapKey = 'noria';
         let showDots = true;
 
+        // Lưu trữ đợt thỏ vừa dán hàng loạt
+        let batchRabbits = {};
+
+        // Lịch sử dấu chấm lưu vĩnh viễn trong LocalStorage
         let rabbitSpawns = JSON.parse(localStorage.getItem('MU_RABBIT_SPAWNS')) || {};
         function saveSpawns() { localStorage.setItem('MU_RABBIT_SPAWNS', JSON.stringify(rabbitSpawns)); }
 
-        // Preload hình ảnh
+        // Preload hình ảnh nội bộ vào RAM
         Object.keys(MAP_DATA).forEach(k => { const img = new Image(); img.src = MAP_DATA[k].img; });
 
         // Dropdown Map
@@ -356,7 +416,7 @@
             mapSelectElem.appendChild(opt);
         });
 
-        // Khởi tạo Leaflet Map 2D
+        // Khởi tạo Map
         const map = L.map('map', {
             crs: L.CRS.Simple, minZoom: -1, maxZoom: 3,
             maxBounds: bounds, maxBoundsViscosity: 1.0, attributionControl: false
@@ -365,17 +425,13 @@
         let currentImageOverlay = L.imageOverlay(MAP_DATA[currentMapKey].img, bounds).addTo(map);
         map.fitBounds(bounds);
 
-        // =======================================================
-        // CÔNG THỨC MATRIX CHUẨN 1:1 [X, Y]:
-        // X = Dọc (0 -> 255) | Y = Ngang (0 -> 255)
-        // =======================================================
+        // Chuyển đổi tọa độ Matrix chuẩn 1:1 [X, Y]: X Dọc (0-255), Y Ngang (0-255)
         function leafletToGame(latlng) {
             return {
                 x: Math.max(0, Math.min(255, Math.floor(MAP_SIZE - latlng.lat))),
                 y: Math.max(0, Math.min(255, Math.floor(latlng.lng)))
             };
         }
-
         function gameToLeaflet(x, y) {
             return [(MAP_SIZE - 1) - x + 0.5, y + 0.5];
         }
@@ -386,15 +442,107 @@
         });
 
         // =======================================================
-        // QUẢN LÝ MARKERS & LỊCH SỬ DẤU CHẤM
+        // ⚡ BỘ BÓC TÁCH DÁN HÀNG LOẠT (SMART REGEX PARSER)
+        // =======================================================
+        function processBatchInput() {
+            const rawText = document.getElementById('batchInput').value;
+            batchRabbits = {};
+
+            if (!rawText.trim()) {
+                document.getElementById('batchCountText').innerText = "Chưa có dữ liệu dán";
+                return;
+            }
+
+            // Regex nhận diện tên map và cặp số (X,Y) hoặc (X.Y)
+            const regex = /(Kanturu Ruins|Kanturu|Karutan\s*1|Karutan\s*2|Karutan|Ferea|Lorencia|Elbeland|Elveland|Devias|Noria)[^\d\(]*\(?\s*(\d+)[\.,\s]+(\d+)\s*\)?/gi;
+            let match;
+            let totalCount = 0;
+
+            while ((match = regex.exec(rawText)) !== null) {
+                const mapRaw = match[1].toLowerCase().replace(/\s+/g, ' ').trim();
+                const mapKey = MAP_KEY_ALIAS[mapRaw];
+                const x = parseInt(match[2], 10);
+                const y = parseInt(match[3], 10);
+
+                if (mapKey && !isNaN(x) && !isNaN(y)) {
+                    if (!batchRabbits[mapKey]) batchRabbits[mapKey] = [];
+                    batchRabbits[mapKey].push({ x, y });
+                    totalCount++;
+                }
+            }
+
+            const mapCount = Object.keys(batchRabbits).length;
+            if (totalCount > 0) {
+                document.getElementById('batchCountText').innerText = `⚡ Đã nạp ${mapCount} map (${totalCount} thỏ)`;
+                loadBatchCoordsToCurrentMap();
+            } else {
+                document.getElementById('batchCountText').innerText = "❌ Không tìm thấy tọa độ hợp lệ";
+            }
+        }
+
+        function clearBatch() {
+            document.getElementById('batchInput').value = '';
+            batchRabbits = {};
+            document.getElementById('batchCountText').innerText = "Chưa có dữ liệu dán";
+            document.getElementById('x1').value = '';
+            document.getElementById('y1').value = '';
+            document.getElementById('x2').value = '';
+            document.getElementById('y2').value = '';
+            updateActiveRabbits();
+        }
+
+        // Tự động gán 2 tọa độ vào ô khi mở map
+        function loadBatchCoordsToCurrentMap() {
+            const coords = batchRabbits[currentMapKey];
+            if (coords && coords.length > 0) {
+                document.getElementById('x1').value = coords[0].x;
+                document.getElementById('y1').value = coords[0].y;
+
+                if (coords.length > 1) {
+                    document.getElementById('x2').value = coords[1].x;
+                    document.getElementById('y2').value = coords[1].y;
+                } else {
+                    document.getElementById('x2').value = '';
+                    document.getElementById('y2').value = '';
+                }
+            }
+            updateActiveRabbits();
+        }
+
+        // Lưu toàn bộ vị trí trên tất cả các map vào lịch sử dấu chấm
+        function saveAllBatchToHistory() {
+            const mapKeys = Object.keys(batchRabbits);
+            if (mapKeys.length === 0) {
+                alert("Chưa có danh sách dán hàng loạt để lưu!");
+                return;
+            }
+
+            let savedTotal = 0;
+            mapKeys.forEach(k => {
+                if (!rabbitSpawns[k]) rabbitSpawns[k] = [];
+                batchRabbits[k].forEach(pt => {
+                    const existing = rabbitSpawns[k].find(p => p.x === pt.x && p.y === pt.y);
+                    if (existing) existing.count++;
+                    else rabbitSpawns[k].push({ x: pt.x, y: pt.y, count: 1 });
+                    savedTotal++;
+                });
+            });
+
+            saveSpawns();
+            renderHistoryDots();
+            alert(`Đã lưu thành công ${savedTotal} vị trí thỏ trên ${mapKeys.length} map vào ổ thỏ!`);
+        }
+
+        // =======================================================
+        // QUẢN LÝ VẼ 2 THỎ & DẤU CHẤM
         // =======================================================
         let markerR1 = null, markerR2 = null;
         let connectionLine = null;
         let historyDotMarkers = [];
         let clickToggle = 0;
 
-        const iconR1 = L.divIcon({ className: 'custom-pin-r1', html: '<div class="active-rabbit-pin pin-r1">T1</div>', iconSize: [28, 28], iconAnchor: [14, 14] });
-        const iconR2 = L.divIcon({ className: 'custom-pin-r2', html: '<div class="active-rabbit-pin pin-r2">T2</div>', iconSize: [28, 28], iconAnchor: [14, 14] });
+        const iconR1 = L.divIcon({ className: 'custom-pin-r1', html: '<div class="active-rabbit-pin pin-r1">T1</div>', iconSize: [26, 26], iconAnchor: [13, 13] });
+        const iconR2 = L.divIcon({ className: 'custom-pin-r2', html: '<div class="active-rabbit-pin pin-r2">T2</div>', iconSize: [26, 26], iconAnchor: [13, 13] });
 
         function parseCoord(val) {
             if (val === '' || isNaN(val)) return null;
@@ -535,6 +683,7 @@
             fillCoord(x, y);
         });
 
+        // Khi người dùng đổi Map từ Dropdown
         function onMapChange(key) {
             if (!MAP_DATA[key]) return;
             currentMapKey = key;
@@ -542,8 +691,9 @@
             document.getElementById('currentMapTitle').innerText = MAP_DATA[key].name.toUpperCase();
             document.getElementById('mapBadge').innerText = `🗺️ ${MAP_DATA[key].name} | ↖ [X:0, Y:0]`;
 
+            // Tự động load tọa độ của map mới từ danh sách dán hàng loạt
+            loadBatchCoordsToCurrentMap();
             renderHistoryDots();
-            updateActiveRabbits();
         }
 
         renderHistoryDots();
